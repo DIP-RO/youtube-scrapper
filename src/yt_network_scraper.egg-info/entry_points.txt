@@ -1,2 +1,0 @@
-[console_scripts]
-yt-network-scraper = yt_network_scraper.cli:main

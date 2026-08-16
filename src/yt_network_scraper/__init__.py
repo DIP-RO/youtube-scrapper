@@ -1,5 +1,57 @@
-"""Network-based YouTube scraping helpers."""
+"""yt-network-scraper — A network-first YouTube video scraper.
 
-from .scraper import YouTubeNetworkScraper
+Public API::
 
-__all__ = ["YouTubeNetworkScraper"]
+    from yt_network_scraper import YouTubeScraper, ScraperConfig
+
+    with YouTubeScraper() as scraper:
+        result = scraper.get_video("VIDEO_ID")
+        print(result.metadata.title)
+"""
+
+from __future__ import annotations
+
+from .client import ScraperConfig, YouTubeScraper
+from .exceptions import (
+    AccessBlockedException,
+    BrowserNotInitializedError,
+    InvalidVideoURLError,
+    ScraperError,
+    SeleniumNotInstalledError,
+    TranscriptUnavailableError,
+)
+from .models import (
+    AccessStatus,
+    Comment,
+    DislikeData,
+    Engagement,
+    NetworkInfo,
+    Summary,
+    Transcript,
+    TranscriptSegment,
+    VideoMetadata,
+    VideoResult,
+)
+
+__all__ = [
+    "YouTubeScraper",
+    "ScraperConfig",
+    "ScraperError",
+    "InvalidVideoURLError",
+    "AccessBlockedException",
+    "SeleniumNotInstalledError",
+    "BrowserNotInitializedError",
+    "TranscriptUnavailableError",
+    "VideoResult",
+    "VideoMetadata",
+    "Transcript",
+    "TranscriptSegment",
+    "Comment",
+    "DislikeData",
+    "Engagement",
+    "Summary",
+    "AccessStatus",
+    "NetworkInfo",
+]
+
+__version__ = "1.0.0"

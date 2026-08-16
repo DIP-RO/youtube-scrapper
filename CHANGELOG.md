@@ -1,0 +1,45 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-08-16
+
+### Added
+- Renamed package to `yt-network-scraper` with clean public API
+- Modern src-layout package structure with Hatchling build backend
+- Typed dataclass models: `VideoResult`, `VideoMetadata`, `Transcript`, `Comment`, `Engagement`, `Summary`, `AccessStatus`, `NetworkInfo`
+- Exception hierarchy: `ScraperError`, `InvalidVideoURLError`, `AccessBlockedException`, `SeleniumNotInstalledError`, `BrowserNotInitializedError`
+- Separated concerns into modules: `client.py`, `scraper.py`, `parsing.py`, `utils.py`, `models.py`, `exceptions.py`, `cli.py`
+- `to_dict()` method on `VideoResult` for JSON serialization
+- Comprehensive pytest test suite with mocked HTTP and Selenium (no live requests)
+- CLI with `video` subcommand and configurable options
+- MIT License
+- GitHub Actions CI workflow (tests on Python 3.10–3.13)
+- GitHub Actions publish workflow with PyPI Trusted Publishing
+- Professional README, CONTRIBUTING, SECURITY, and CHANGELOG documentation
+- `pyproject.toml` with full project metadata, classifiers, and optional dev dependencies
+
+### Changed
+- Refactored 1060-line monolithic `scraper.py` into focused modules
+- Replaced untyped dict return values with typed dataclass models
+- Added structured logging via `logging` module instead of silent failures
+- Improved error handling with typed exceptions
+- CLI restructured with subcommand pattern for future extensibility
+
+### Removed
+- Committed sample JSON output files (`test_*.json`)
+- Committed `egg-info` directory
+- Duplicate `fetch_comments` wrapper function
+- `requirements.txt` (replaced by `pyproject.toml` dependencies)
+
+## [0.1.0] - 2026-06-17
+
+### Added
+- Initial release
+- Headless Selenium network-based YouTube video scraper
+- Video metadata, transcript, comments, and summary extraction
+- CLI entry point
+- Basic test suite for helper functions
