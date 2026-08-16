@@ -340,69 +340,60 @@ All configuration is done through the `ScraperConfig` dataclass:
 
 The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
 
+```mermaid
+graph LR
+    subgraph "src/yt_network_scraper/"
+        __init__["__init__.py<br/>Public API exports"]
+        client["client.py<br/>HTTP / network layer<br/>Selenium · DevTools · innertube · RYD API"]
+        scraper["scraper.py<br/>Orchestration layer<br/>Workflow coordinator"]
+        parsing["parsing.py<br/>Pure parsing functions<br/>Metadata · transcript · comments · blocks"]
+        models["models.py<br/>Typed dataclass models<br/>VideoResult · Transcript · Comment · ..."]
+        exceptions["exceptions.py<br/>Exception hierarchy<br/>ScraperError + subclasses"]
+        utils["utils.py<br/>Utilities<br/>URL validation · summarization · helpers"]
+        cli["cli.py<br/>CLI<br/>argparse video subcommand"]
+    end
+
+    cli --> scraper
+    __init__ --> scraper
+    __init__ --> models
+    __init__ --> exceptions
+    scraper --> client
+    scraper --> parsing
+    scraper --> utils
+    scraper --> models
+    parsing --> utils
+    client --> models
 ```
-src/yt_network_scraper/
-├── __init__.py      Public API exports (YouTubeScraper, ScraperConfig, models, exceptions)
-├── client.py        HTTP/network layer — Selenium browser lifecycle, Chrome DevTools log
-│                    capture, innertube API calls, Return YouTube Dislike API integration
-├── scraper.py       Orchestration layer — coordinates the full scrape workflow:
-│                    load page → capture network → parse metadata → fetch transcript →
-│                    fetch comments → fetch dislikes → generate summary → build VideoResult
-├── parsing.py       Pure parsing functions — extracts metadata, transcript, comments,
-│                    and access-block status from YouTube JSON payloads. No network calls.
-├── models.py        Typed dataclass models — VideoResult, VideoMetadata, Transcript,
-│                    TranscriptSegment, Comment, Engagement, DislikeData, Summary,
-│                    AccessStatus, NetworkInfo. Each has to_dict() for JSON serialization.
-├── exceptions.py    Exception hierarchy — ScraperError (base), InvalidVideoURLError,
-│                    AccessBlockedException, SeleniumNotInstalledError,
-│                    BrowserNotInitializedError, TranscriptUnavailableError
-├── utils.py         Utilities — URL validation, video ID extraction, text summarization,
-│                    sentence splitting, key lookup helpers, HTML unescaping
-└── cli.py           Command-line interface — argparse-based CLI with `video` subcommand
-```
+
+| Module | Responsibility |
+|--------|---------------|
+| `__init__.py` | Public API exports — `YouTubeScraper`, `ScraperConfig`, all models, all exceptions |
+| `client.py` | HTTP/network layer — Selenium browser lifecycle, Chrome DevTools log capture, innertube API calls, Return YouTube Dislike API integration |
+| `scraper.py` | Orchestration layer — coordinates the full scrape workflow: load page → capture network → parse metadata → fetch transcript → fetch comments → fetch dislikes → generate summary → build `VideoResult` |
+| `parsing.py` | Pure parsing functions — extracts metadata, transcript, comments, and access-block status from YouTube JSON payloads. No network calls. |
+| `models.py` | Typed dataclass models — `VideoResult`, `VideoMetadata`, `Transcript`, `TranscriptSegment`, `Comment`, `Engagement`, `DislikeData`, `Summary`, `AccessStatus`, `NetworkInfo`. Each has `to_dict()` for JSON serialization. |
+| `exceptions.py` | Exception hierarchy — `ScraperError` (base), `InvalidVideoURLError`, `AccessBlockedException`, `SeleniumNotInstalledError`, `BrowserNotInitializedError`, `TranscriptUnavailableError` |
+| `utils.py` | Utilities — URL validation, video ID extraction, text summarization, sentence splitting, key lookup helpers, HTML unescaping |
+| `cli.py` | Command-line interface — argparse-based CLI with `video` subcommand |
 
 ### How a scrape works
 
-```
-User calls scraper.get_video(url)
-         │
-         ▼
-  ┌─────────────┐
-  │  utils.py   │  Extract video ID from URL, validate format
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  client.py  │  Launch headless Chrome via Selenium
-  │             │  Navigate to watch URL
-  │             │  Capture Chrome DevTools performance logs
-  │             │  Extract ytInitialPlayerResponse, ytInitialData, ytcfg from network events
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │ parsing.py  │  Parse metadata (title, views, channel, dates, keywords, etc.)
-  │             │  Detect access blocks (CAPTCHA, consent, sign-in)
-  │             │  Extract innertube API key and transcript endpoint
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  client.py  │  Fetch transcript via innertube get_panel or timedtext URL
-  │             │  Fetch comments via innertube next continuation API (paginated)
-  │             │  Fetch dislikes from Return YouTube Dislike API
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  utils.py   │  Generate extractive summary from transcript or description
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  models.py  │  Assemble all data into a typed VideoResult dataclass
-  │             │  Return to caller — serializable via to_dict() / to_json()
-  └─────────────┘
+```mermaid
+flowchart TD
+    Start["User calls<br/>scraper.get_video(url)"]
+    Utils1["utils.py<br/>Extract video ID from URL<br/>Validate format"]
+    Client1["client.py<br/>Launch headless Chrome via Selenium<br/>Navigate to watch URL<br/>Capture Chrome DevTools performance logs<br/>Extract ytInitialPlayerResponse,<br/>ytInitialData, ytcfg from network events"]
+    Parsing["parsing.py<br/>Parse metadata (title, views, channel,<br/>dates, keywords, etc.)<br/>Detect access blocks (CAPTCHA, consent, sign-in)<br/>Extract innertube API key and transcript endpoint"]
+    Client2["client.py<br/>Fetch transcript via innertube get_panel<br/>or timedtext URL<br/>Fetch comments via innertube next<br/>continuation API (paginated)<br/>Fetch dislikes from Return YouTube Dislike API"]
+    Utils2["utils.py<br/>Generate extractive summary<br/>from transcript or description"]
+    Models["models.py<br/>Assemble all data into a typed<br/>VideoResult dataclass<br/>Return to caller — serializable via<br/>to_dict() / to_json()"]
+
+    Start --> Utils1
+    Utils1 --> Client1
+    Client1 --> Parsing
+    Parsing --> Client2
+    Client2 --> Utils2
+    Utils2 --> Models
 ```
 
 ### Design principles
