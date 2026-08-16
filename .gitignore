@@ -33,3 +33,8 @@ Thumbs.db
 # Output files
 result.json
 *.output.json
+
+# Node.js (mermaid-cli for diagram generation)
+node_modules/
+package.json
+package-lock.json
