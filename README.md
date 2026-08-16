@@ -340,30 +340,7 @@ All configuration is done through the `ScraperConfig` dataclass:
 
 The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
 
-```mermaid
-graph LR
-    subgraph "src/yt_network_scraper/"
-        __init__["__init__.py<br/>Public API exports"]
-        client["client.py<br/>HTTP / network layer<br/>Selenium · DevTools · innertube · RYD API"]
-        scraper["scraper.py<br/>Orchestration layer<br/>Workflow coordinator"]
-        parsing["parsing.py<br/>Pure parsing functions<br/>Metadata · transcript · comments · blocks"]
-        models["models.py<br/>Typed dataclass models<br/>VideoResult · Transcript · Comment · ..."]
-        exceptions["exceptions.py<br/>Exception hierarchy<br/>ScraperError + subclasses"]
-        utils["utils.py<br/>Utilities<br/>URL validation · summarization · helpers"]
-        cli["cli.py<br/>CLI<br/>argparse video subcommand"]
-    end
-
-    cli --> scraper
-    __init__ --> scraper
-    __init__ --> models
-    __init__ --> exceptions
-    scraper --> client
-    scraper --> parsing
-    scraper --> utils
-    scraper --> models
-    parsing --> utils
-    client --> models
-```
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.svg" alt="Module dependency graph" width="100%" />
 
 | Module | Responsibility |
 |--------|---------------|
@@ -378,23 +355,7 @@ graph LR
 
 ### How a scrape works
 
-```mermaid
-flowchart TD
-    Start["User calls<br/>scraper.get_video(url)"]
-    Utils1["utils.py<br/>Extract video ID from URL<br/>Validate format"]
-    Client1["client.py<br/>Launch headless Chrome via Selenium<br/>Navigate to watch URL<br/>Capture Chrome DevTools performance logs<br/>Extract ytInitialPlayerResponse,<br/>ytInitialData, ytcfg from network events"]
-    Parsing["parsing.py<br/>Parse metadata (title, views, channel,<br/>dates, keywords, etc.)<br/>Detect access blocks (CAPTCHA, consent, sign-in)<br/>Extract innertube API key and transcript endpoint"]
-    Client2["client.py<br/>Fetch transcript via innertube get_panel<br/>or timedtext URL<br/>Fetch comments via innertube next<br/>continuation API (paginated)<br/>Fetch dislikes from Return YouTube Dislike API"]
-    Utils2["utils.py<br/>Generate extractive summary<br/>from transcript or description"]
-    Models["models.py<br/>Assemble all data into a typed<br/>VideoResult dataclass<br/>Return to caller — serializable via<br/>to_dict() / to_json()"]
-
-    Start --> Utils1
-    Utils1 --> Client1
-    Client1 --> Parsing
-    Parsing --> Client2
-    Client2 --> Utils2
-    Utils2 --> Models
-```
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.svg" alt="Scrape flowchart" width="100%" />
 
 ### Design principles
 

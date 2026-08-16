@@ -1,0 +1,22 @@
+graph LR
+    subgraph "src/yt_network_scraper/"
+        __init__["__init__.py<br/>Public API exports"]
+        client["client.py<br/>HTTP / network layer<br/>Selenium · DevTools · innertube · RYD API"]
+        scraper["scraper.py<br/>Orchestration layer<br/>Workflow coordinator"]
+        parsing["parsing.py<br/>Pure parsing functions<br/>Metadata · transcript · comments · blocks"]
+        models["models.py<br/>Typed dataclass models<br/>VideoResult · Transcript · Comment · ..."]
+        exceptions["exceptions.py<br/>Exception hierarchy<br/>ScraperError + subclasses"]
+        utils["utils.py<br/>Utilities<br/>URL validation · summarization · helpers"]
+        cli["cli.py<br/>CLI<br/>argparse video subcommand"]
+    end
+
+    cli --> scraper
+    __init__ --> scraper
+    __init__ --> models
+    __init__ --> exceptions
+    scraper --> client
+    scraper --> parsing
+    scraper --> utils
+    scraper --> models
+    parsing --> utils
+    client --> models
