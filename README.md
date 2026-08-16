@@ -4,6 +4,52 @@ A network-first YouTube video scraper that extracts metadata, transcripts, comme
 
 Unlike traditional DOM scrapers, this package opens a real browser via Selenium, captures network responses through Chrome DevTools performance logs, and parses YouTube's own JSON payloads (`ytInitialPlayerResponse`, `ytInitialData`, `ytcfg`). It then uses YouTube's innertube API for transcripts and comments. This approach is more resilient to UI changes and avoids brittle CSS selectors.
 
+## Why yt-network-scraper?
+
+There are several excellent YouTube libraries on PyPI. Here is how `yt-network-scraper` compares to the most popular ones, so you can pick the right tool for your use case:
+
+| Feature | yt-network-scraper | yt-dlp | pytube / pytubefix | youtube-transcript-api | ytscrape | tubescrape |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Video metadata** | Yes | Yes | Yes | No | Yes | Yes |
+| **Transcript / captions** | Yes | Yes | No | Yes | Yes | Yes |
+| **Comments** | Yes | No | No | No | Yes | No |
+| **Dislike counts** | Yes (RYD API) | No | No | No | No | No |
+| **Extractive summary** | Yes | No | No | No | No | No |
+| **Access-block detection** | Yes | No | No | No | No | No |
+| **Typed dataclass models** | Yes | No | No | Yes | Yes | Yes |
+| **JSON serialization** | Yes (`to_dict()`) | No | No | No | No | Yes |
+| **CLI** | Yes | Yes | Yes | Yes | Yes | Yes |
+| **Search videos** | No | Limited | No | No | Yes | Yes |
+| **Channel browsing** | No | Yes | No | No | Yes | Yes |
+| **Playlists** | No | Yes | Yes | No | No | Yes |
+| **Video download** | No | Yes | Yes | No | No | No |
+| **Async support** | No | No | No | No | Yes | Yes |
+| **Approach** | Browser + network capture | HTTP | HTTP | HTTP | HTTP (innertube) | HTTP (innertube) |
+| **Browser required** | Yes (Chrome) | No | No | No | No | No |
+| **API key needed** | No | No | No | No | No | No |
+| **Core dependencies** | selenium, requests | many | 0 | requests | requests, pycountry | httpx |
+| **Python** | 3.10+ | 3.10+ | 3.7+ | 3.9+ | 3.10+ | 3.10+ |
+| **License** | MIT | Unlicense | Unlicense | MIT | MIT | MIT |
+
+### When to use yt-network-scraper
+
+**Use this package if you need:**
+
+- **Comments** — very few libraries extract YouTube comments. This one does, with full author info, likes, hearted/pinned status, and reply counts.
+- **Dislike counts** — integrated with the Return YouTube Dislike API, which no other listed library provides.
+- **Automatic summaries** — built-in extractive summarization of transcripts, so you get a quick text summary alongside the full transcript.
+- **Access-block detection** — detects CAPTCHAs, consent walls, and sign-in challenges and reports them rather than silently failing or trying to bypass them.
+- **A real browser session** — some videos require JavaScript rendering and network-level payload capture that pure HTTP libraries cannot access. This package captures Chrome DevTools performance logs to extract YouTube's own JSON payloads.
+- **A single, unified result object** — metadata, transcript, comments, engagement, summary, and network diagnostics in one typed `VideoResult` with `to_dict()` for JSON serialization.
+
+**Use a different package if you need:**
+
+- **Video downloading** → use `yt-dlp` or `pytube`
+- **Search or channel browsing** → use `ytscrape` or `tubescrape`
+- **Transcripts only (lightweight, no browser)** → use `youtube-transcript-api`
+- **Async / high-throughput scraping** → use `ytscrape` or `tubescrape`
+- **Playlist extraction** → use `yt-dlp`, `pytube`, or `tubescrape`
+
 ## Features
 
 - **Video metadata**: title, description, views, channel info, publish/upload dates, duration, tags, thumbnail
@@ -289,6 +335,83 @@ All configuration is done through the `ScraperConfig` dataclass:
 | `request_delay` | `1.5` | Base delay between fallback network requests (seconds) |
 | `max_page_retries` | `2` | Number of retries when YouTube returns a block page |
 | `user_agent` | Chrome 125 UA | User-Agent string for the browser and HTTP session |
+
+## Package Architecture
+
+The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
+
+```
+src/yt_network_scraper/
+├── __init__.py      Public API exports (YouTubeScraper, ScraperConfig, models, exceptions)
+├── client.py        HTTP/network layer — Selenium browser lifecycle, Chrome DevTools log
+│                    capture, innertube API calls, Return YouTube Dislike API integration
+├── scraper.py       Orchestration layer — coordinates the full scrape workflow:
+│                    load page → capture network → parse metadata → fetch transcript →
+│                    fetch comments → fetch dislikes → generate summary → build VideoResult
+├── parsing.py       Pure parsing functions — extracts metadata, transcript, comments,
+│                    and access-block status from YouTube JSON payloads. No network calls.
+├── models.py        Typed dataclass models — VideoResult, VideoMetadata, Transcript,
+│                    TranscriptSegment, Comment, Engagement, DislikeData, Summary,
+│                    AccessStatus, NetworkInfo. Each has to_dict() for JSON serialization.
+├── exceptions.py    Exception hierarchy — ScraperError (base), InvalidVideoURLError,
+│                    AccessBlockedException, SeleniumNotInstalledError,
+│                    BrowserNotInitializedError, TranscriptUnavailableError
+├── utils.py         Utilities — URL validation, video ID extraction, text summarization,
+│                    sentence splitting, key lookup helpers, HTML unescaping
+└── cli.py           Command-line interface — argparse-based CLI with `video` subcommand
+```
+
+### How a scrape works
+
+```
+User calls scraper.get_video(url)
+         │
+         ▼
+  ┌─────────────┐
+  │  utils.py   │  Extract video ID from URL, validate format
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  client.py  │  Launch headless Chrome via Selenium
+  │             │  Navigate to watch URL
+  │             │  Capture Chrome DevTools performance logs
+  │             │  Extract ytInitialPlayerResponse, ytInitialData, ytcfg from network events
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ parsing.py  │  Parse metadata (title, views, channel, dates, keywords, etc.)
+  │             │  Detect access blocks (CAPTCHA, consent, sign-in)
+  │             │  Extract innertube API key and transcript endpoint
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  client.py  │  Fetch transcript via innertube get_panel or timedtext URL
+  │             │  Fetch comments via innertube next continuation API (paginated)
+  │             │  Fetch dislikes from Return YouTube Dislike API
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  utils.py   │  Generate extractive summary from transcript or description
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  models.py  │  Assemble all data into a typed VideoResult dataclass
+  │             │  Return to caller — serializable via to_dict() / to_json()
+  └─────────────┘
+```
+
+### Design principles
+
+- **Network layer is isolated** — all Selenium and HTTP calls live in `client.py`. Parsing functions in `parsing.py` are pure and take dicts as input, making them trivial to test with fixtures.
+- **Typed models everywhere** — the scraper never returns raw dicts. Every result is a typed dataclass with documented fields, optional fields are `None` when unavailable, and `to_dict()` produces clean JSON.
+- **Defensive parsing** — YouTube changes payload shapes frequently. Every parser uses safe key lookups (`find_key`, `find_all_keys`) and returns `None` or empty lists for missing fields instead of raising exceptions.
+- **No bot evasion** — the scraper detects access blocks but never tries to bypass them. If YouTube returns a CAPTCHA or consent wall, the `network.access_status` field reports it and the scrape completes with available data.
+- **Configurable behavior** — `ScraperConfig` controls headless mode, timeout, retries, delays, comment limits, transcript language, and user agent. Sensible defaults work for most cases.
 
 ## Error Handling
 
