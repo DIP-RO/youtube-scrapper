@@ -1,0 +1,19 @@
+[project]
+name = "yt-network-scraper"
+version = "0.1.0"
+description = "Headless Selenium network-based YouTube video metadata, comment, transcript, and summary scraper."
+requires-python = ">=3.10"
+dependencies = [
+  "requests>=2.31.0",
+  "selenium>=4.18.0",
+]
+
+[project.scripts]
+yt-network-scraper = "yt_network_scraper.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
