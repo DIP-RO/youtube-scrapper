@@ -1,11 +1,11 @@
 flowchart TD
     Start["User calls<br/>scraper.get_video(url)"]
-    Utils1["utils.py<br/>Extract video ID from URL<br/>Validate format"]
-    Client1["client.py<br/>Launch headless Chrome via Selenium<br/>Navigate to watch URL<br/>Capture Chrome DevTools performance logs<br/>Extract ytInitialPlayerResponse,<br/>ytInitialData, ytcfg from network events"]
-    Parsing["parsing.py<br/>Parse metadata (title, views, channel,<br/>dates, keywords, etc.)<br/>Detect access blocks (CAPTCHA, consent, sign-in)<br/>Extract innertube API key and transcript endpoint"]
-    Client2["client.py<br/>Fetch transcript via innertube get_panel<br/>or timedtext URL<br/>Fetch comments via innertube next<br/>continuation API (paginated)<br/>Fetch dislikes from Return YouTube Dislike API"]
-    Utils2["utils.py<br/>Generate extractive summary<br/>from transcript or description"]
-    Models["models.py<br/>Assemble all data into a typed<br/>VideoResult dataclass<br/>Return to caller — serializable via<br/>to_dict() / to_json()"]
+    Utils1["utils.py — Extract video ID,<br/>validate format"]
+    Client1["client.py — Launch Chrome, navigate,<br/>capture DevTools logs, extract<br/>ytInitialPlayerResponse & ytcfg"]
+    Parsing["parsing.py — Parse metadata,<br/>detect access blocks,<br/>extract API key & transcript endpoint"]
+    Client2["client.py — Fetch transcript,<br/>comments (paginated),<br/>dislikes from RYD API"]
+    Utils2["utils.py — Generate extractive<br/>summary from transcript"]
+    Models["models.py — Assemble typed<br/>VideoResult, return to caller"]
 
     Start --> Utils1
     Utils1 --> Client1
