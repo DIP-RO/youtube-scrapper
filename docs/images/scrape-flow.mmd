@@ -1,15 +1,12 @@
-flowchart TD
-    Start["User calls<br/>scraper.get_video(url)"]
-    Utils1["utils.py — Extract video ID,<br/>validate format"]
-    Client1["client.py — Launch Chrome, navigate,<br/>capture DevTools logs, extract<br/>ytInitialPlayerResponse & ytcfg"]
-    Parsing["parsing.py — Parse metadata,<br/>detect access blocks,<br/>extract API key & transcript endpoint"]
-    Client2["client.py — Fetch transcript,<br/>comments (paginated),<br/>dislikes from RYD API"]
-    Utils2["utils.py — Generate extractive<br/>summary from transcript"]
-    Models["models.py — Assemble typed<br/>VideoResult, return to caller"]
+flowchart LR
+    A["1. Input<br/>get_video(url)<br/>Extract & validate<br/>video ID"]
+    B["2. Browser & Capture<br/>Launch Chrome<br/>Capture DevTools logs<br/>Extract JSON payloads"]
+    C["3. Parse & Fetch<br/>Parse metadata<br/>Detect blocks<br/>Fetch transcript<br/>comments, dislikes"]
+    D["4. Output<br/>Generate summary<br/>Assemble VideoResult<br/>to_dict() / to_json()"]
 
-    Start --> Utils1
-    Utils1 --> Client1
-    Client1 --> Parsing
-    Parsing --> Client2
-    Client2 --> Utils2
-    Utils2 --> Models
+    A --> B --> C --> D
+
+    style A fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style B fill:#FF9800,stroke:#E65100,color:#fff
+    style C fill:#FF9800,stroke:#E65100,color:#fff
+    style D fill:#2196F3,stroke:#1565C0,color:#fff
