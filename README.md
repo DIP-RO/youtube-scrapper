@@ -340,7 +340,7 @@ All configuration is done through the `ScraperConfig` dataclass:
 
 The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
 
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.svg" alt="Module dependency graph" width="100%" />
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.svg" alt="Module dependency graph" width="720" />
 
 | Module | Responsibility |
 |--------|---------------|
@@ -355,7 +355,7 @@ The package is organized into focused, single-responsibility modules under `src/
 
 ### How a scrape works
 
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.svg" alt="Scrape flowchart" width="100%" />
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.svg" alt="Scrape flowchart" width="600" />
 
 ### Design principles
 
