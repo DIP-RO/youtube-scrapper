@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-network-scraper"
-version = "1.0.2"
+version = "1.0.3"
 description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
 readme = "README.md"
 license = "MIT"
@@ -73,6 +73,7 @@ include = [
     "CONTRIBUTING.md",
     "SECURITY.md",
     "docs/images/*.svg",
+    "docs/images/*.png",
 ]
 
 [tool.pytest.ini_options]

@@ -1,13 +1,13 @@
-graph LR
+flowchart LR
     subgraph "src/yt_network_scraper/"
         __init__["__init__.py<br/>Public API exports"]
-        client["client.py<br/>Network layer"]
+        cli["cli.py<br/>CLI entry point"]
         scraper["scraper.py<br/>Orchestration"]
+        client["client.py<br/>Network layer"]
         parsing["parsing.py<br/>Pure parsing"]
         models["models.py<br/>Typed models"]
         exceptions["exceptions.py<br/>Exceptions"]
         utils["utils.py<br/>Utilities"]
-        cli["cli.py<br/>CLI"]
     end
 
     cli --> scraper
@@ -20,3 +20,8 @@ graph LR
     scraper --> models
     parsing --> utils
     client --> models
+
+    style scraper fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style client fill:#FF9800,stroke:#E65100,color:#fff
+    style parsing fill:#FF9800,stroke:#E65100,color:#fff
+    style models fill:#2196F3,stroke:#1565C0,color:#fff
