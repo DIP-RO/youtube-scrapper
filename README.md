@@ -64,11 +64,36 @@ There are several excellent YouTube libraries on PyPI. Here is how `yt-network-s
 
 ## Installation
 
+### Option 1: pip (requires Chrome installed locally)
+
 ```bash
 pip install yt-network-scraper
 ```
 
 **Prerequisites**: Google Chrome must be installed. Selenium Manager will automatically fetch a matching ChromeDriver in recent Selenium versions.
+
+### Option 2: Docker (no Chrome installation needed)
+
+No need to install Chrome, Python, or any dependencies — Docker handles everything:
+
+```bash
+# Build the image
+docker build -t yt-network-scraper .
+
+# Scrape a video and save output to ./output/result.json
+docker run --rm -v "$(pwd)/output:/output" yt-network-scraper \
+  video "https://youtu.be/ALyQ-c9_HBI" --comments 25 --pretty --out /output/result.json
+```
+
+### Option 3: Docker Compose
+
+```bash
+# Build and run with docker compose
+docker compose run --rm yt-network-scraper \
+  video "https://youtu.be/ALyQ-c9_HBI" --comments 25 --pretty --out /output/result.json
+```
+
+The `docker-compose.yml` is included in the repo. Output files are saved to the `./output/` directory via a mounted volume.
 
 ## Quick Start
 

@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  yt-network-scraper:
+    build: .
+    container_name: yt-scraper
+    # Chrome requires --no-sandbox and --disable-dev-shm-usage in Docker
+    # These are passed automatically via ScraperConfig defaults
+    environment:
+      - CHROME_NO_SANDBOX=1
+    volumes:
+      # Mount output directory to save JSON results
+      - ./output:/output
+    # Example: scrape a video and save output
+    # Override with: docker compose run yt-network-scraper video "URL" --comments 25 --pretty --out /output/result.json
+    command: ["--help"]

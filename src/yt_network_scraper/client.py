@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 import time
 from dataclasses import dataclass
@@ -274,7 +275,19 @@ class YouTubeScraper:
         options.add_argument("--window-size=1365,900")
         options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
-        driver = webdriver.Chrome(options=options)
+        # Use Chromium binary if CHROME_BIN env var is set (e.g. in Docker)
+        chrome_bin = os.environ.get("CHROME_BIN")
+        if chrome_bin:
+            options.binary_location = chrome_bin
+
+        # Use explicit chromedriver path if CHROMEDRIVER_PATH env var is set
+        chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
+        if chromedriver_path:
+            from selenium.webdriver.chrome.service import Service
+            service = Service(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=options)
+        else:
+            driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(self.config.timeout)
         driver.execute_cdp_cmd("Network.enable", {})
         return driver

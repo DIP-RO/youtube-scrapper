@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-17
+
+### Added
+- Docker support with Dockerfile using Chromium (works on amd64 and arm64)
+- docker-compose.yml for easy one-command usage
+- .dockerignore to keep image size small
+- `CHROME_BIN` and `CHROMEDRIVER_PATH` environment variable support for Docker and CI
+- README documentation for Docker and Docker Compose installation
+
+### Changed
+- Scraper now uses `CHROME_BIN` env var to locate Chromium binary in Docker
+- Scraper now uses `CHROMEDRIVER_PATH` env var for explicit driver path in Docker
+
 ## [1.0.3] - 2026-08-17
 
 ### Changed
