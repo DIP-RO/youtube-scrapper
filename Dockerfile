@@ -1,9 +1,9 @@
 FROM python:3.12-slim
 
 LABEL maintainer="Dipro Paul <dipropaul032@gmail.com>"
-LABEL org.opencontainers.image.title="yt-network-scraper"
+LABEL org.opencontainers.image.title="media-data-extractor"
 LABEL org.opencontainers.image.description="Network-first YouTube video scraper"
-LABEL org.opencontainers.image.source="https://pypi.org/project/yt-network-scraper/"
+LABEL org.opencontainers.image.source="https://pypi.org/project/media-data-extractor/"
 LABEL org.opencontainers.image.license="MIT"
 
 # Install Chromium and dependencies (works on amd64 and arm64)
@@ -48,5 +48,5 @@ RUN mkdir -p /output
 VOLUME ["/output"]
 
 # Default command — override with docker-compose or docker run
-ENTRYPOINT ["yt-network-scraper"]
+ENTRYPOINT ["media-data-extractor"]
 CMD ["--help"]

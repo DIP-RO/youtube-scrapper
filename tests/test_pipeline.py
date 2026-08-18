@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from yt_network_scraper.models import (
+from media_data_extractor.models import (
     AccessStatus,
     BatchError,
     BatchResult,
@@ -20,7 +20,7 @@ from yt_network_scraper.models import (
     VideoMetadata,
     VideoResult,
 )
-from yt_network_scraper.pipeline import (
+from media_data_extractor.pipeline import (
     PipelineResult,
     PipelineStageResult,
     ScrapePipeline,
@@ -73,7 +73,7 @@ class TestPipelineStages:
 
 
 class TestPipelineRun:
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_only(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -89,7 +89,7 @@ class TestPipelineRun:
         assert len(result.stage_results) == 1
         assert result.stage_results[0].name == "scrape"
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_and_sentiment(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -105,7 +105,7 @@ class TestPipelineRun:
         assert result.stage_results[1].succeeded == 2
         assert len(result.sentiments) == 2
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_sentiment_export(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -125,7 +125,7 @@ class TestPipelineRun:
         assert len(result.output_files) > 0
         assert Path(result.output_files[0]).exists()
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_filter_sentiment(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -133,7 +133,7 @@ class TestPipelineRun:
         mock_scraper.batch_scrape = MagicMock(return_value=_make_batch(2))
         mock_scraper_class.return_value = mock_scraper
 
-        from yt_network_scraper.filters import CommentFilter
+        from media_data_extractor.filters import CommentFilter
         pipeline = ScrapePipeline(
             stages=["scrape", "filter", "sentiment"],
             comment_filter=CommentFilter(keyword="great"),
@@ -143,7 +143,7 @@ class TestPipelineRun:
         assert len(result.stage_results) == 3
         assert result.stage_results[1].name == "filter"
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_export_csv(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -162,7 +162,7 @@ class TestPipelineRun:
         content = Path(result.output_files[0]).read_text()
         assert "video_id" in content
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_export_jsonl(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -181,7 +181,7 @@ class TestPipelineRun:
         lines = content.strip().split("\n")
         assert len(lines) == 2  # 2 videos
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_export_xlsx(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -199,7 +199,7 @@ class TestPipelineRun:
         content = Path(result.output_files[0]).read_text()
         assert "<Workbook" in content
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_download_stage(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -217,7 +217,7 @@ class TestPipelineRun:
         assert result.stage_results[1].name == "download"
         assert len(result.output_files) > 0
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_empty_urls(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -231,7 +231,7 @@ class TestPipelineRun:
         assert result.total == 0
         assert result.succeeded == 0
 
-    @patch("yt_network_scraper.pipeline.YouTubeScraper")
+    @patch("media_data_extractor.pipeline.YouTubeScraper")
     def test_scrape_failure(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)

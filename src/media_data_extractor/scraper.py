@@ -2,7 +2,7 @@
 
 These functions make HTTP requests to YouTube's innertube API and the
 Return YouTube Dislike API.  They are kept separate from the
-:class:`~yt_network_scraper.client.YouTubeScraper` orchestration class
+:class:`~media_data_extractor.client.YouTubeScraper` orchestration class
 so they can be tested in isolation with mocked HTTP sessions.
 """
 

@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-import yt_network_scraper
-from yt_network_scraper import (
+import media_data_extractor
+from media_data_extractor import (
     # Core
     YouTubeScraper,
     ScraperConfig,
@@ -172,15 +172,15 @@ def full_batch():
 
 class TestPackageInit:
     def test_version_is_3_1_0(self):
-        assert yt_network_scraper.__version__ == "3.1.0"
+        assert media_data_extractor.__version__ == "4.0.0"
 
     def test_all_exports_present(self):
-        assert len(yt_network_scraper.__all__) >= 60
+        assert len(media_data_extractor.__all__) >= 60
 
     def test_no_import_errors(self):
         """Ensure importing the package doesn't raise."""
         import importlib
-        importlib.reload(yt_network_scraper)
+        importlib.reload(media_data_extractor)
 
 
 # ---------------------------------------------------------------------------
@@ -524,7 +524,7 @@ class TestEndToEndWorkflow:
         video = _make_full_video("e2e_test")
 
         # 2. Filter comments
-        from yt_network_scraper import CommentFilter
+        from media_data_extractor import CommentFilter
         filtered = filter_comments(video, filter=CommentFilter(min_likes=5))
         assert len(filtered) <= len(video.comments)
 

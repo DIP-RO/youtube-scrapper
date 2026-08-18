@@ -1,4 +1,4 @@
-"""Basic usage example for yt-network-scraper.
+"""Basic usage example for media-data-extractor.
 
 Run this script after installing the package and having Google Chrome installed:
 
@@ -10,7 +10,7 @@ of the result so you can see exactly what the scraper returns.
 
 from __future__ import annotations
 
-from yt_network_scraper import ScraperConfig, YouTubeScraper
+from media_data_extractor import ScraperConfig, YouTubeScraper
 
 
 def main() -> None:

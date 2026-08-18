@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from yt_network_scraper.player import (
+from media_data_extractor.player import (
     Playlist,
     Track,
     VideoPlayer,

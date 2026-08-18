@@ -1,10 +1,10 @@
-"""Tests for YouTube payload parsing functions in yt_network_scraper.parsing."""
+"""Tests for YouTube payload parsing functions in media_data_extractor.parsing."""
 
 from __future__ import annotations
 
 import pytest
 
-from yt_network_scraper.parsing import (
+from media_data_extractor.parsing import (
     choose_caption_track,
     extract_api_key,
     extract_innertube_context,

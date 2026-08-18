@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from yt_network_scraper.performance import (
+from media_data_extractor.performance import (
     BackoffStrategy,
     LRUCache,
     RateLimiter,

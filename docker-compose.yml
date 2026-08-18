@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  yt-network-scraper:
+  media-data-extractor:
     build: .
     container_name: yt-scraper
     # Chrome requires --no-sandbox and --disable-dev-shm-usage in Docker
@@ -12,5 +12,5 @@ services:
       # Mount output directory to save JSON results
       - ./output:/output
     # Example: scrape a video and save output
-    # Override with: docker compose run yt-network-scraper video "URL" --comments 25 --pretty --out /output/result.json
+    # Override with: docker compose run media-data-extractor video "URL" --comments 25 --pretty --out /output/result.json
     command: ["--help"]

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from yt_network_scraper.filters import CommentFilter, filter_comments, search_comments, top_comments
-from yt_network_scraper.models import (
+from media_data_extractor.filters import CommentFilter, filter_comments, search_comments, top_comments
+from media_data_extractor.models import (
     AccessStatus,
     Comment,
     Engagement,

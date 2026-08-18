@@ -1,10 +1,10 @@
-"""Tests for pure utility functions in yt_network_scraper.utils."""
+"""Tests for pure utility functions in media_data_extractor.utils."""
 
 from __future__ import annotations
 
 import pytest
 
-from yt_network_scraper.utils import (
+from media_data_extractor.utils import (
     detect_access_block,
     duration_from_bounds,
     extract_video_id,

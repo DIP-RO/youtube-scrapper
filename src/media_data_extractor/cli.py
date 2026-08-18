@@ -1,13 +1,13 @@
-"""Command-line interface for yt-network-scraper.
+"""Command-line interface for media-data-extractor.
 
 Usage::
 
-    yt-network-scraper video "https://www.youtube.com/watch?v=VIDEO_ID" --comments 50 --pretty
-    yt-network-scraper video dQw4w9WgXcQ --out result.json --format csv
-    yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --out batch.json
-    yt-network-scraper batch --file urls.txt --workers 3 --format csv --comments-csv
-    yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --out channel.json
-    yt-network-scraper playlist "PLxxxx" --workers 4 --out playlist.json
+    media-data-extractor video "https://www.youtube.com/watch?v=VIDEO_ID" --comments 50 --pretty
+    media-data-extractor video dQw4w9WgXcQ --out result.json --format csv
+    media-data-extractor batch "URL1" "URL2" "URL3" --workers 4 --out batch.json
+    media-data-extractor batch --file urls.txt --workers 3 --format csv --comments-csv
+    media-data-extractor channel "@handle" --max-videos 50 --workers 4 --out channel.json
+    media-data-extractor playlist "PLxxxx" --workers 4 --out playlist.json
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from .export import download_batch, download_video, export_batch, export_video
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser for the CLI."""
     parser = argparse.ArgumentParser(
-        prog="yt-network-scraper",
+        prog="media-data-extractor",
         description="Scrape YouTube video metadata, comments, transcript, and summary from network payloads.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")

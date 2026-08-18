@@ -1,16 +1,23 @@
-# yt-network-scraper
+# media-data-extractor
 
 > **Follow for more packages:** I'm actively building Python packages that make development easier — scraping, automation, data tools, and more. Follow me on [GitHub](https://github.com/DIP-RO) and [LinkedIn](https://www.linkedin.com/in/dipro-paul) to stay updated on new releases.
 
-A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads using headless Chrome and Selenium.
+**Extract metadata, transcripts, comments, sentiment, and video files from YouTube. Includes a built-in video player, playlist manager, and end-to-end research pipeline.**
 
-Unlike traditional DOM scrapers, this package opens a real browser via Selenium, captures network responses through Chrome DevTools performance logs, and parses YouTube's own JSON payloads (`ytInitialPlayerResponse`, `ytInitialData`, `ytcfg`). It then uses YouTube's innertube API for transcripts and comments. This approach is more resilient to UI changes and avoids brittle CSS selectors.
+[![PyPI version](https://img.shields.io/pypi/v/media-data-extractor.svg)](https://pypi.org/project/media-data-extractor/)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/media-data-extractor.svg)](https://pypi.org/project/media-data-extractor/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-467%20passing-brightgreen.svg)](#)
 
-## Why yt-network-scraper?
+A network-first YouTube data extraction toolkit that captures network responses through Chrome DevTools and parses YouTube's own JSON payloads. Unlike traditional DOM scrapers, this package opens a real browser via Selenium, captures network responses, and parses `ytInitialPlayerResponse`, `ytInitialData`, and `ytcfg`. It then uses YouTube's innertube API for transcripts and comments.
 
-There are several excellent YouTube libraries on PyPI. Here is how `yt-network-scraper` compares to the most popular ones, so you can pick the right tool for your use case:
+**Search keywords:** youtube scraper, youtube data extractor, youtube transcript, youtube comments, youtube metadata, youtube downloader, youtube sentiment analysis, youtube api python, youtube research tool, media data extraction, video scraper python, youtube playlist scraper, youtube channel scraper, youtube batch scraper
 
-| Feature | yt-network-scraper | yt-dlp | pytube / pytubefix | youtube-transcript-api | ytscrape | tubescrape |
+## Why media-data-extractor?
+
+There are several excellent YouTube libraries on PyPI. Here is how `media-data-extractor` compares to the most popular ones, so you can pick the right tool for your use case:
+
+| Feature | media-data-extractor | yt-dlp | pytube / pytubefix | youtube-transcript-api | ytscrape | tubescrape |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Video metadata** | Yes | Yes | Yes | No | Yes | Yes |
 | **Transcript / captions** | Yes | Yes | No | Yes | Yes | Yes |
@@ -33,7 +40,7 @@ There are several excellent YouTube libraries on PyPI. Here is how `yt-network-s
 | **Python** | 3.10+ | 3.10+ | 3.7+ | 3.9+ | 3.10+ | 3.10+ |
 | **License** | MIT | Unlicense | Unlicense | MIT | MIT | MIT |
 
-### When to use yt-network-scraper
+### When to use media-data-extractor
 
 **Use this package if you need:**
 
@@ -69,7 +76,7 @@ There are several excellent YouTube libraries on PyPI. Here is how `yt-network-s
 ### Option 1: pip (requires Chrome installed locally)
 
 ```bash
-pip install yt-network-scraper
+pip install media-data-extractor
 ```
 
 **Prerequisites**: Google Chrome must be installed. Selenium Manager will automatically fetch a matching ChromeDriver in recent Selenium versions.
@@ -80,10 +87,10 @@ No need to install Chrome, Python, or any dependencies — Docker handles everyt
 
 ```bash
 # Build the image
-docker build -t yt-network-scraper .
+docker build -t media-data-extractor .
 
 # Scrape a video and save output to ./output/result.json
-docker run --rm -v "$(pwd)/output:/output" yt-network-scraper \
+docker run --rm -v "$(pwd)/output:/output" media-data-extractor \
   video "https://youtu.be/ALyQ-c9_HBI" --comments 25 --pretty --out /output/result.json
 ```
 
@@ -91,16 +98,25 @@ docker run --rm -v "$(pwd)/output:/output" yt-network-scraper \
 
 ```bash
 # Build and run with docker compose
-docker compose run --rm yt-network-scraper \
+docker compose run --rm media-data-extractor \
   video "https://youtu.be/ALyQ-c9_HBI" --comments 25 --pretty --out /output/result.json
 ```
 
 The `docker-compose.yml` is included in the repo. Output files are saved to the `./output/` directory via a mounted volume.
 
+### CLI shortcuts
+
+The package installs two CLI commands — they are identical, use whichever is shorter:
+
+```bash
+media-data-extractor video "URL"     # full name
+mdx video "URL"                       # short alias
+```
+
 ## Quick Start
 
 ```python
-from yt_network_scraper import YouTubeScraper, ScraperConfig
+from media_data_extractor import YouTubeScraper, ScraperConfig
 
 config = ScraperConfig(max_comments=50, transcript_language="en")
 
@@ -135,7 +151,7 @@ scraper.get_video("dQw4w9WgXcQ")
 Scrape multiple videos in parallel — each video gets its own browser instance running in a thread pool. Failed videos are captured without stopping the batch:
 
 ```python
-from yt_network_scraper import YouTubeScraper, ScraperConfig
+from media_data_extractor import YouTubeScraper, ScraperConfig
 
 config = ScraperConfig(
     max_comments=25,
@@ -174,10 +190,10 @@ batch = scraper.batch_scrape(urls, progress_callback=progress)
 
 ```bash
 # Scrape multiple videos concurrently
-yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.json
+media-data-extractor batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.json
 
 # Or read URLs from a file (one per line)
-yt-network-scraper batch --file urls.txt --workers 3 --comments 50 --out batch.json
+media-data-extractor batch --file urls.txt --workers 3 --comments 50 --out batch.json
 ```
 
 ### Crash-Resumable Checkpointing
@@ -198,10 +214,10 @@ with YouTubeScraper(config) as scraper:
 
 ```bash
 # First run — crashes or is interrupted
-yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+media-data-extractor batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
 
 # Re-run — skips completed videos automatically
-yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+media-data-extractor batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
 ```
 
 The checkpoint file is a JSON file that records each video's status (`ok` or `error`) and result data. It's written atomically after each video completes, so progress is never lost.
@@ -239,7 +255,7 @@ Return BatchResult (100 succeeded, 0 failed)
 
 ```bash
 # Automatically retries on any crash — no manual intervention needed
-yt-network-scraper batch --file urls.txt --workers 4 \
+media-data-extractor batch --file urls.txt --workers 4 \
     --checkpoint progress.json \
     --auto-resume \
     --max-retries 5 \
@@ -266,13 +282,13 @@ with YouTubeScraper(config) as scraper:
 
 ```bash
 # Scrape all videos from a channel
-yt-network-scraper channel "@mkbhd" --max-videos 50 --workers 4 --out channel.json
+media-data-extractor channel "@mkbhd" --max-videos 50 --workers 4 --out channel.json
 
 # Scrape all videos from a playlist
-yt-network-scraper playlist "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf" --workers 4 --out playlist.json
+media-data-extractor playlist "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf" --workers 4 --out playlist.json
 
 # With crash recovery
-yt-network-scraper channel "@handle" --auto-resume --checkpoint progress.json --out channel.json
+media-data-extractor channel "@handle" --auto-resume --checkpoint progress.json --out channel.json
 ```
 
 ### Multi-Format Export (CSV, JSONL, TXT)
@@ -280,7 +296,7 @@ yt-network-scraper channel "@handle" --auto-resume --checkpoint progress.json --
 Export scraped data to formats commonly used by researchers and data analysts:
 
 ```python
-from yt_network_scraper import export_video, export_batch
+from media_data_extractor import export_video, export_batch
 
 # Single video
 csv_data = export_video(result, format="csv")           # metadata CSV
@@ -298,19 +314,19 @@ batch_jsonl = export_batch(batch, format="jsonl")       # one JSON per line
 
 ```bash
 # Export to CSV
-yt-network-scraper video "URL" --format csv --out result.csv
+media-data-extractor video "URL" --format csv --out result.csv
 
 # Export comments to CSV
-yt-network-scraper video "URL" --format csv --comments-csv --out comments.csv
+media-data-extractor video "URL" --format csv --comments-csv --out comments.csv
 
 # Export transcript to TXT
-yt-network-scraper video "URL" --format txt --out transcript.txt
+media-data-extractor video "URL" --format txt --out transcript.txt
 
 # Export batch to CSV
-yt-network-scraper batch --file urls.txt --format csv --out batch.csv
+media-data-extractor batch --file urls.txt --format csv --out batch.csv
 
 # Export all comments from batch to CSV
-yt-network-scraper batch --file urls.txt --format csv --comments-csv --out all_comments.csv
+media-data-extractor batch --file urls.txt --format csv --comments-csv --out all_comments.csv
 ```
 
 ### Sentiment Analysis
@@ -318,7 +334,7 @@ yt-network-scraper batch --file urls.txt --format csv --comments-csv --out all_c
 Built-in lexicon-based sentiment scoring for comments — no external dependencies (NLTK, transformers) required:
 
 ```python
-from yt_network_scraper import analyze_sentiment, analyze_video_sentiment
+from media_data_extractor import analyze_sentiment, analyze_video_sentiment
 
 # Analyze a single text
 result = analyze_sentiment("This video is amazing and very helpful!")
@@ -345,7 +361,7 @@ The sentiment scorer uses a curated lexicon of positive/negative words with nega
 Filter comments by keyword, author, likes, date range, sentiment, or regex:
 
 ```python
-from yt_network_scraper import filter_comments, search_comments, top_comments, CommentFilter
+from media_data_extractor import filter_comments, search_comments, top_comments, CommentFilter
 
 # Filter by keyword
 filtered = filter_comments(result, keyword="python")
@@ -377,7 +393,7 @@ top = top_comments(result, n=10)
 Export to Excel XML SpreadsheetML format — no external dependency needed, Excel opens it natively:
 
 ```python
-from yt_network_scraper import export_video, export_batch
+from media_data_extractor import export_video, export_batch
 
 # Single video to Excel
 xlsx_data = export_video(result, format="xlsx")
@@ -392,8 +408,8 @@ xlsx_batch = export_batch(batch, format="xlsx")
 **CLI:**
 
 ```bash
-yt-network-scraper video "URL" --format xlsx --out result.xlsx
-yt-network-scraper batch --file urls.txt --format xlsx --out batch.xlsx
+media-data-extractor video "URL" --format xlsx --out result.xlsx
+media-data-extractor batch --file urls.txt --format xlsx --out batch.xlsx
 ```
 
 ### SRT Subtitle Export
@@ -401,7 +417,7 @@ yt-network-scraper batch --file urls.txt --format xlsx --out batch.xlsx
 Export transcripts as SRT subtitle files for use in video editors, media players, and NLP pipelines:
 
 ```python
-from yt_network_scraper import export_video
+from media_data_extractor import export_video
 
 srt_data = export_video(result, format="srt")
 # Output:
@@ -417,7 +433,7 @@ srt_data = export_video(result, format="srt")
 **CLI:**
 
 ```bash
-yt-network-scraper video "URL" --format srt --out transcript.srt
+media-data-extractor video "URL" --format srt --out transcript.srt
 ```
 
 ### Download Feature (Save All Files to Directory)
@@ -425,7 +441,7 @@ yt-network-scraper video "URL" --format srt --out transcript.srt
 The download feature saves all result files to a directory in one call — perfect for building datasets:
 
 ```python
-from yt_network_scraper import download_video, download_batch
+from media_data_extractor import download_video, download_batch
 
 # Save all files for a single video
 files = download_video(result, output_dir="./output")
@@ -457,13 +473,13 @@ files = download_video(result, "./output", formats=["json", "csv"])
 
 ```bash
 # Download all files for a single video
-yt-network-scraper video "URL" --download ./output
+media-data-extractor video "URL" --download ./output
 
 # Download all files for a batch
-yt-network-scraper batch --file urls.txt --workers 4 --download ./dataset
+media-data-extractor batch --file urls.txt --workers 4 --download ./dataset
 
 # Download channel data
-yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --download ./channel_data
+media-data-extractor channel "@handle" --max-videos 50 --workers 4 --download ./channel_data
 ```
 
 ### Video File Download
@@ -471,7 +487,7 @@ yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --download ./ch
 Download actual YouTube video files to disk. The scraper extracts stream URLs from YouTube's `streamingData` payload and downloads the video file. For high-quality adaptive formats (1080p+), audio and video are downloaded separately and merged with ffmpeg if available.
 
 ```python
-from yt_network_scraper import YouTubeScraper, ScraperConfig
+from media_data_extractor import YouTubeScraper, ScraperConfig
 
 with YouTubeScraper() as scraper:
     # Download best quality (auto-merges with ffmpeg if needed)
@@ -508,16 +524,16 @@ with YouTubeScraper() as scraper:
 
 ```bash
 # Download best quality
-yt-network-scraper download "https://www.youtube.com/watch?v=VIDEO_ID" -o video.mp4
+media-data-extractor download "https://www.youtube.com/watch?v=VIDEO_ID" -o video.mp4
 
 # Download specific quality
-yt-network-scraper download "VIDEO_ID" -o video.mp4 --quality 720p
+media-data-extractor download "VIDEO_ID" -o video.mp4 --quality 720p
 
 # Download audio only
-yt-network-scraper download "VIDEO_ID" -o audio.m4a --quality audio
+media-data-extractor download "VIDEO_ID" -o audio.m4a --quality audio
 
 # List available formats without downloading
-yt-network-scraper download "VIDEO_ID" --list-formats
+media-data-extractor download "VIDEO_ID" --list-formats
 ```
 
 **Output of `--list-formats`:**
@@ -556,7 +572,7 @@ Install ffmpeg:
 Play downloaded videos with playlist support, shuffle, loop, and subtitle loading. Uses ffplay (ffmpeg), VLC, mpv, or the system default player:
 
 ```python
-from yt_network_scraper import VideoPlayer, Playlist, Track, create_playlist_from_directory
+from media_data_extractor import VideoPlayer, Playlist, Track, create_playlist_from_directory
 
 # Play a single file
 player = VideoPlayer(volume=80)
@@ -586,7 +602,7 @@ player.set_volume(50)
 playlist = create_playlist_from_directory("./downloads")
 
 # Save/load playlists
-from yt_network_scraper import save_playlist, load_playlist
+from media_data_extractor import save_playlist, load_playlist
 save_playlist(playlist, "my_playlist.json")
 loaded = load_playlist("my_playlist.json")
 
@@ -599,16 +615,16 @@ player.play_playlist(playlist)
 
 ```bash
 # Play a single video
-yt-network-scraper player video.mp4
+media-data-extractor player video.mp4
 
 # Play all videos in a directory
-yt-network-scraper player ./downloads --shuffle --loop all
+media-data-extractor player ./downloads --shuffle --loop all
 
 # Play a saved playlist
-yt-network-scraper player playlist.json --volume 80
+media-data-extractor player playlist.json --volume 80
 
 # Dry-run (validate without playing)
-yt-network-scraper player ./downloads --dry-run
+media-data-extractor player ./downloads --dry-run
 ```
 
 ### Pipeline (End-to-End Research Workflow)
@@ -616,7 +632,7 @@ yt-network-scraper player ./downloads --dry-run
 The pipeline chains all stages together: scrape → filter → sentiment → export → download. One command does everything:
 
 ```python
-from yt_network_scraper import ScrapePipeline, ScraperConfig, CommentFilter
+from media_data_extractor import ScrapePipeline, ScraperConfig, CommentFilter
 
 pipeline = ScrapePipeline(
     config=ScraperConfig(max_workers=4),
@@ -640,13 +656,13 @@ for stage in result.stage_results:
 
 ```bash
 # Full pipeline: scrape + sentiment + export to CSV
-yt-network-scraper pipeline "URL1" "URL2" "URL3" \
+media-data-extractor pipeline "URL1" "URL2" "URL3" \
   --stages scrape,sentiment,export \
   --format csv \
   --output-dir ./output
 
 # Full pipeline with download and crash recovery
-yt-network-scraper pipeline --file urls.txt \
+media-data-extractor pipeline --file urls.txt \
   --workers 4 \
   --stages scrape,sentiment,export,download,download_video \
   --format json \
@@ -673,7 +689,7 @@ yt-network-scraper pipeline --file urls.txt \
 For high-volume batch jobs (1000+ videos), the package includes performance utilities:
 
 ```python
-from yt_network_scraper import LRUCache, RateLimiter, BackoffStrategy, retry_with_backoff, chunk_list
+from media_data_extractor import LRUCache, RateLimiter, BackoffStrategy, retry_with_backoff, chunk_list
 
 # LRU cache — O(1) get/put, thread-safe
 cache = LRUCache(maxsize=1000)
@@ -709,7 +725,7 @@ for chunk in chunks:
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:
 
 ```bash
-yt-network-scraper video "https://youtu.be/ALyQ-c9_HBI" --comments 5 --pretty
+media-data-extractor video "https://youtu.be/ALyQ-c9_HBI" --comments 5 --pretty
 ```
 
 The result is a `VideoResult` object. Calling `result.to_dict()` (or using `--pretty` / `--out` in the CLI) produces JSON with this structure:
@@ -860,7 +876,7 @@ The result is a `VideoResult` object. Calling `result.to_dict()` (or using `--pr
 The main scraper class. Must be used as a context manager to manage the browser lifecycle.
 
 ```python
-from yt_network_scraper import YouTubeScraper, ScraperConfig
+from media_data_extractor import YouTubeScraper, ScraperConfig
 
 config = ScraperConfig(
     headless=True,           # Run Chrome in headless mode
@@ -895,7 +911,7 @@ Call `result.to_dict()` to serialize the entire result to a JSON-compatible dict
 ### Exceptions
 
 ```python
-from yt_network_scraper import (
+from media_data_extractor import (
     ScraperError,              # Base exception
     InvalidVideoURLError,      # URL/ID could not be parsed
     AccessBlockedException,    # YouTube returned an access challenge
@@ -908,19 +924,19 @@ from yt_network_scraper import (
 
 ```bash
 # Scrape a video and print JSON to stdout
-yt-network-scraper video "https://www.youtube.com/watch?v=VIDEO_ID"
+media-data-extractor video "https://www.youtube.com/watch?v=VIDEO_ID"
 
 # Save to a file with pretty-printing
-yt-network-scraper video VIDEO_ID --out result.json --pretty
+media-data-extractor video VIDEO_ID --out result.json --pretty
 
 # Fetch up to 100 comments in French
-yt-network-scraper video VIDEO_ID --comments 100 --lang fr
+media-data-extractor video VIDEO_ID --comments 100 --lang fr
 
 # Show Chrome (for debugging)
-yt-network-scraper video VIDEO_ID --no-headless
+media-data-extractor video VIDEO_ID --no-headless
 
 # Custom timeout and retries
-yt-network-scraper video VIDEO_ID --timeout 60 --retries 5
+media-data-extractor video VIDEO_ID --timeout 60 --retries 5
 ```
 
 ## Configuration
@@ -939,7 +955,7 @@ All configuration is done through the `ScraperConfig` dataclass:
 
 ## Package Architecture
 
-The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
+The package is organized into focused, single-responsibility modules under `src/media_data_extractor/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
 
 <img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.png" alt="Module dependency graph" width="680" />
 
@@ -971,7 +987,7 @@ The package is organized into focused, single-responsibility modules under `src/
 The scraper uses a typed exception hierarchy. All exceptions inherit from `ScraperError`:
 
 ```python
-from yt_network_scraper import YouTubeScraper, ScraperError
+from media_data_extractor import YouTubeScraper, ScraperError
 
 try:
     with YouTubeScraper() as scraper:
@@ -996,7 +1012,7 @@ pip install -e ".[dev]"
 pytest
 
 # Run tests with coverage
-pytest --cov=yt_network_scraper
+pytest --cov=media_data_extractor
 
 # Build the package
 python -m build

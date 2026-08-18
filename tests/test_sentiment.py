@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from yt_network_scraper.models import (
+from media_data_extractor.models import (
     AccessStatus,
     Comment,
     Engagement,
@@ -14,7 +14,7 @@ from yt_network_scraper.models import (
     VideoMetadata,
     VideoResult,
 )
-from yt_network_scraper.sentiment import (
+from media_data_extractor.sentiment import (
     CommentSentiment,
     SentimentResult,
     VideoSentiment,

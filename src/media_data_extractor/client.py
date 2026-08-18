@@ -2,7 +2,7 @@
 
 Usage::
 
-    from yt_network_scraper import YouTubeScraper, ScraperConfig
+    from media_data_extractor import YouTubeScraper, ScraperConfig
 
     config = ScraperConfig(max_comments=50, transcript_language="en")
     with YouTubeScraper(config) as scraper:
@@ -896,7 +896,7 @@ class YouTubeScraper:
         except ModuleNotFoundError as exc:
             raise SeleniumNotInstalledError(
                 "Selenium is required to run the scraper. "
-                "Install dependencies with `pip install yt-network-scraper[browser]`."
+                "Install dependencies with `pip install media-data-extractor[browser]`."
             ) from exc
 
         options = Options()

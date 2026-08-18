@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import yt_network_scraper
-from yt_network_scraper import (
+import media_data_extractor
+from media_data_extractor import (
     YouTubeScraper,
     ScraperConfig,
     ScraperError,
@@ -48,8 +48,8 @@ from yt_network_scraper import (
 
 
 def test_version():
-    assert hasattr(yt_network_scraper, "__version__")
-    assert yt_network_scraper.__version__ == "3.1.0"
+    assert hasattr(media_data_extractor, "__version__")
+    assert media_data_extractor.__version__ == "4.0.0"
 
 
 def test_all_exports():
@@ -138,7 +138,7 @@ def test_all_exports():
         "get_stream_cache",
         "clear_all_caches",
     }
-    assert set(yt_network_scraper.__all__) == expected
+    assert set(media_data_extractor.__all__) == expected
 
 
 def test_exception_hierarchy():

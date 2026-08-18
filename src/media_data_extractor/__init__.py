@@ -1,8 +1,8 @@
-"""yt-network-scraper — A network-first YouTube video scraper and downloader.
+"""media-data-extractor — A network-first YouTube video scraper and downloader.
 
 Public API::
 
-    from yt_network_scraper import YouTubeScraper, ScraperConfig
+    from media_data_extractor import YouTubeScraper, ScraperConfig
 
     with YouTubeScraper() as scraper:
         result = scraper.get_video("VIDEO_ID")
@@ -15,16 +15,16 @@ Public API::
         )
 
     # Export to CSV
-    from yt_network_scraper import export_video
+    from media_data_extractor import export_video
     csv_data = export_video(result, format="csv")
 
     # Sentiment analysis
-    from yt_network_scraper import analyze_video_sentiment
+    from media_data_extractor import analyze_video_sentiment
     sentiment = analyze_video_sentiment(result)
     print(sentiment.overall_label)
 
     # Comment filtering
-    from yt_network_scraper import filter_comments, CommentFilter
+    from media_data_extractor import filter_comments, CommentFilter
     filtered = filter_comments(result, keyword="great", min_likes=10)
 
     # Video file download
@@ -32,14 +32,14 @@ Public API::
         result = scraper.download_video_file("URL", "./video.mp4", quality="720p")
 
     # Video player with playlist
-    from yt_network_scraper import VideoPlayer, Playlist, Track
+    from media_data_extractor import VideoPlayer, Playlist, Track
     player = VideoPlayer(dry_run=True)
     playlist = Playlist(name="My Mix")
     playlist.add_track(Track(path="video.mp4"))
     player.play_playlist(playlist)
 
     # Pipeline (scrape → filter → sentiment → export → download)
-    from yt_network_scraper import ScrapePipeline
+    from media_data_extractor import ScrapePipeline
     pipeline = ScrapePipeline(
         stages=["scrape", "sentiment", "export"],
         export_format="csv",
@@ -225,4 +225,4 @@ __all__ = [
     "clear_all_caches",
 ]
 
-__version__ = "3.1.0"
+__version__ = "4.0.0"

@@ -1,4 +1,4 @@
-"""Exception hierarchy for yt-network-scraper."""
+"""Exception hierarchy for media-data-extractor."""
 
 from __future__ import annotations
 

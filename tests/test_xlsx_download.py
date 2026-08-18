@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from yt_network_scraper.export import (
+from media_data_extractor.export import (
     _ms_to_srt_time,
     _rows_to_xlsx,
     batch_to_xlsx,
@@ -18,7 +18,7 @@ from yt_network_scraper.export import (
     transcript_to_srt,
     video_to_xlsx,
 )
-from yt_network_scraper.models import (
+from media_data_extractor.models import (
     AccessStatus,
     BatchError,
     BatchResult,

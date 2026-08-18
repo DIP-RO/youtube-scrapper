@@ -3,9 +3,9 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "yt-network-scraper"
-version = "3.1.0"
-description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
+name = "media-data-extractor"
+version = "4.0.0"
+description = "Extract metadata, transcripts, comments, sentiment, and video files from YouTube. Includes video player, playlist management, and research pipeline."
 readme = "README_PYPY.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -14,12 +14,26 @@ authors = [
 ]
 keywords = [
     "youtube",
-    "scraper",
+    "youtube-scraper",
+    "youtube-downloader",
+    "youtube-transcript",
+    "youtube-comments",
+    "youtube-metadata",
+    "youtube-api",
+    "youtube-extractor",
+    "media-data-extractor",
+    "video-downloader",
+    "video-player",
     "transcript",
     "comments",
-    "metadata",
+    "sentiment-analysis",
     "selenium",
-    "network",
+    "scraper",
+    "data-extraction",
+    "media-extraction",
+    "research",
+    "pipeline",
+    "playlist",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -49,18 +63,19 @@ dev = [
 ]
 
 [project.scripts]
-yt-network-scraper = "yt_network_scraper.cli:main"
+media-data-extractor = "media_data_extractor.cli:main"
+mdx = "media_data_extractor.cli:main"
 
 [project.urls]
-Homepage = "https://pypi.org/project/yt-network-scraper/"
-Changelog = "https://pypi.org/project/yt-network-scraper/#history"
+Homepage = "https://pypi.org/project/media-data-extractor/"
+Changelog = "https://pypi.org/project/media-data-extractor/#history"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/yt_network_scraper"]
+packages = ["src/media_data_extractor"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/yt_network_scraper",
+    "src/media_data_extractor",
     "tests",
     "examples",
     "README.md",
@@ -77,7 +92,7 @@ testpaths = ["tests"]
 addopts = "-v --tb=short"
 
 [tool.coverage.run]
-source = ["src/yt_network_scraper"]
+source = ["src/media_data_extractor"]
 
 [tool.coverage.report]
 show_missing = true

@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-08-18
+
+### Changed — Package rename (BREAKING)
+
+- **Package renamed** from `yt-network-scraper` to `media-data-extractor`
+  - PyPI distribution name: `media-data-extractor`
+  - Python import name: `media_data_extractor`
+  - Old name `yt-network-scraper` is deprecated and will not receive updates
+- **CLI alias**: `mdx` added as a short alias for `media-data-extractor`
+  - `mdx video "URL"` works the same as `media-data-extractor video "URL"`
+- **SEO keywords** added to PyPI metadata for discoverability
+- **Description updated** to reflect full feature set (player, pipeline, sentiment)
+
+### Migration guide
+
+If you were using the old package name:
+
+```python
+# Old (deprecated)
+from yt_network_scraper import YouTubeScraper
+
+# New (v4.0.0+)
+from media_data_extractor import YouTubeScraper
+```
+
+```bash
+# Old
+pip install yt-network-scraper
+
+# New
+pip install media-data-extractor
+```
+
+```bash
+# Old CLI
+yt-network-scraper video "URL"
+
+# New CLI
+mdx video "URL"
+# or
+media-data-extractor video "URL"
+```
+
+All public API classes, functions, and models remain the same — only the package name changed.
+
 ## [3.1.0] - 2026-08-18
 
 ### Added — Major release: Video Player, Pipeline, Performance
@@ -41,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — Video File Download
 - **Full video download** — download actual YouTube video files to disk
   - `scraper.download_video_file(url, output, quality)` Python API
-  - `yt-network-scraper download` CLI subcommand
+  - `media-data-extractor download` CLI subcommand
   - Quality selection: best, worst, 720p, 1080p, 4k, audio
   - Progressive format download (combined audio+video, up to 720p)
   - Adaptive format download with ffmpeg merging (1080p+)
@@ -101,10 +146,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `filter_comments()`, `search_comments()`, `top_comments()` helpers
 - **Channel scraping** — discover and scrape all videos from a channel
   - `scraper.scrape_channel("@handle")` in Python
-  - `yt-network-scraper channel "@handle"` CLI subcommand
+  - `media-data-extractor channel "@handle"` CLI subcommand
 - **Playlist scraping** — discover and scrape all videos from a playlist
   - `scraper.scrape_playlist("PLxxxx")` in Python
-  - `yt-network-scraper playlist "PLxxxx"` CLI subcommand
+  - `media-data-extractor playlist "PLxxxx"` CLI subcommand
 - 56 new tests (235 total)
 
 ### Removed
@@ -156,7 +201,7 @@ batch = scraper.batch_scrape(urls, checkpoint="progress.json")
 - `BatchError` model captures per-video failures without stopping the batch
 - `max_workers` and `batch_delay` config options for controlling concurrency
 - Progress callback support for tracking long-running batches
-- CLI `batch` subcommand: `yt-network-scraper batch "URL1" "URL2" --workers 4`
+- CLI `batch` subcommand: `media-data-extractor batch "URL1" "URL2" --workers 4`
 - CLI `--file` option to read URLs from a file (one per line)
 - 11 new tests for batch functionality (167 total)
 
@@ -240,7 +285,7 @@ with YouTubeScraper(ScraperConfig(max_workers=4)) as scraper:
 ## [1.0.0] - 2026-08-16
 
 ### Added
-- Renamed package to `yt-network-scraper` with clean public API
+- Renamed package to `media-data-extractor` with clean public API
 - Modern src-layout package structure with Hatchling build backend
 - Typed dataclass models: `VideoResult`, `VideoMetadata`, `Transcript`, `Comment`, `Engagement`, `Summary`, `AccessStatus`, `NetworkInfo`
 - Exception hierarchy: `ScraperError`, `InvalidVideoURLError`, `AccessBlockedException`, `SeleniumNotInstalledError`, `BrowserNotInitializedError`

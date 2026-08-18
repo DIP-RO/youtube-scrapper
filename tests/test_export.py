@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from yt_network_scraper.export import (
+from media_data_extractor.export import (
     batch_comments_to_csv,
     batch_to_csv,
     batch_to_jsonl,
@@ -19,7 +19,7 @@ from yt_network_scraper.export import (
     video_to_csv,
     video_to_jsonl,
 )
-from yt_network_scraper.models import (
+from media_data_extractor.models import (
     AccessStatus,
     BatchError,
     BatchResult,
