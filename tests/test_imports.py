@@ -21,6 +21,14 @@ from yt_network_scraper import (
     Summary,
     AccessStatus,
     NetworkInfo,
+    BatchResult,
+    BatchError,
+    export_video,
+    export_batch,
+    analyze_sentiment,
+    analyze_video_sentiment,
+    CommentFilter,
+    filter_comments,
 )
 
 
@@ -51,6 +59,28 @@ def test_all_exports():
         "NetworkInfo",
         "BatchResult",
         "BatchError",
+        # Export
+        "export_video",
+        "export_batch",
+        "video_to_csv",
+        "comments_to_csv",
+        "transcript_to_txt",
+        "video_to_jsonl",
+        "batch_to_csv",
+        "batch_to_jsonl",
+        "batch_comments_to_csv",
+        # Sentiment
+        "analyze_sentiment",
+        "analyze_comment_sentiment",
+        "analyze_video_sentiment",
+        "SentimentResult",
+        "CommentSentiment",
+        "VideoSentiment",
+        # Filters
+        "CommentFilter",
+        "filter_comments",
+        "search_comments",
+        "top_comments",
     }
     assert set(yt_network_scraper.__all__) == expected
 

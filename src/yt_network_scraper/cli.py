@@ -3,9 +3,11 @@
 Usage::
 
     yt-network-scraper video "https://www.youtube.com/watch?v=VIDEO_ID" --comments 50 --pretty
-    yt-network-scraper video dQw4w9WgXcQ --out result.json
+    yt-network-scraper video dQw4w9WgXcQ --out result.json --format csv
     yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --out batch.json
-    yt-network-scraper batch --file urls.txt --workers 3 --pretty
+    yt-network-scraper batch --file urls.txt --workers 3 --format csv --comments-csv
+    yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --out channel.json
+    yt-network-scraper playlist "PLxxxx" --workers 4 --out playlist.json
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from pathlib import Path
 
 from .client import ScraperConfig, YouTubeScraper
 from .exceptions import ScraperError
+from .export import export_batch, export_video
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,6 +30,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
+    # --- common args helper ---
+    def add_common_args(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--comments", type=int, default=25, help="Maximum comments to fetch (default: 25)")
+        p.add_argument("--lang", default="en", help="Preferred transcript language code (default: en)")
+        p.add_argument("--out", type=Path, help="Write result to this path")
+        p.add_argument("--timeout", type=int, default=25, help="Browser timeout in seconds (default: 25)")
+        p.add_argument("--request-delay", type=float, default=1.5, help="Delay between fallback network requests (default: 1.5)")
+        p.add_argument("--retries", type=int, default=2, help="Page-load retries (default: 2)")
+        p.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping")
+        p.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+        p.add_argument(
+            "--format",
+            choices=["json", "csv", "jsonl", "txt"],
+            default="json",
+            help="Output format: json, csv, jsonl, or txt (default: json)",
+        )
+        p.add_argument("--comments-csv", action="store_true", help="Export comments as CSV (use with --format csv)")
+
     # --- video subcommand ---
     video_parser = subparsers.add_parser(
         "video",
@@ -34,24 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Scrape metadata, transcript, comments, and summary for a single YouTube video.",
     )
     video_parser.add_argument("url", help="YouTube watch URL, youtu.be URL, shorts URL, or 11-char video ID")
-    video_parser.add_argument("--comments", type=int, default=25, help="Maximum comments to fetch (default: 25)")
-    video_parser.add_argument("--lang", default="en", help="Preferred transcript language code (default: en)")
-    video_parser.add_argument("--out", type=Path, help="Write JSON result to this path")
-    video_parser.add_argument("--timeout", type=int, default=25, help="Browser timeout in seconds (default: 25)")
-    video_parser.add_argument(
-        "--request-delay",
-        type=float,
-        default=1.5,
-        help="Delay between fallback network requests in seconds (default: 1.5)",
-    )
-    video_parser.add_argument(
-        "--retries",
-        type=int,
-        default=2,
-        help="Page-load retries when YouTube returns a block page (default: 2)",
-    )
-    video_parser.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping (for debugging)")
-    video_parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    add_common_args(video_parser)
 
     # --- batch subcommand ---
     batch_parser = subparsers.add_parser(
@@ -62,38 +66,44 @@ def build_parser() -> argparse.ArgumentParser:
     batch_parser.add_argument("urls", nargs="*", help="YouTube URLs or video IDs (space-separated)")
     batch_parser.add_argument("--file", type=Path, help="File containing one URL/ID per line")
     batch_parser.add_argument("--workers", type=int, default=3, help="Max concurrent browser instances (default: 3)")
-    batch_parser.add_argument("--batch-delay", type=float, default=2.0, help="Delay between starting each task in seconds (default: 2.0)")
-    batch_parser.add_argument("--comments", type=int, default=25, help="Maximum comments to fetch per video (default: 25)")
-    batch_parser.add_argument("--lang", default="en", help="Preferred transcript language code (default: en)")
-    batch_parser.add_argument("--out", type=Path, help="Write JSON result to this path")
-    batch_parser.add_argument("--timeout", type=int, default=25, help="Browser timeout in seconds (default: 25)")
-    batch_parser.add_argument("--request-delay", type=float, default=1.5, help="Delay between fallback network requests (default: 1.5)")
-    batch_parser.add_argument("--retries", type=int, default=2, help="Page-load retries (default: 2)")
-    batch_parser.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping")
-    batch_parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
-    batch_parser.add_argument(
-        "--checkpoint",
-        type=str,
-        default=None,
-        help="Path to checkpoint JSON file for crash-resumable batching. Completed videos are saved incrementally and skipped on re-run.",
+    batch_parser.add_argument("--batch-delay", type=float, default=2.0, help="Delay between starting each task (default: 2.0)")
+    add_common_args(batch_parser)
+    batch_parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint JSON file for crash-resumable batching")
+    batch_parser.add_argument("--auto-resume", action="store_true", help="Auto-retry on crash (requires --checkpoint)")
+    batch_parser.add_argument("--max-retries", type=int, default=3, help="Max retry attempts (default: 3)")
+    batch_parser.add_argument("--retry-delay", type=float, default=5.0, help="Seconds to wait before retry (default: 5.0)")
+
+    # --- channel subcommand ---
+    channel_parser = subparsers.add_parser(
+        "channel",
+        help="Scrape all videos from a YouTube channel",
+        description="Discover video IDs from a channel and scrape them all concurrently.",
     )
-    batch_parser.add_argument(
-        "--auto-resume",
-        action="store_true",
-        help="Enable automatic crash recovery. On any crash, the batch retries from the checkpoint (up to --max-retries times).",
+    channel_parser.add_argument("channel", help="Channel URL, @handle, or channel ID (UCxxxx)")
+    channel_parser.add_argument("--max-videos", type=int, default=30, help="Max videos to discover (default: 30)")
+    channel_parser.add_argument("--workers", type=int, default=3, help="Max concurrent browser instances (default: 3)")
+    channel_parser.add_argument("--batch-delay", type=float, default=2.0, help="Delay between starting each task (default: 2.0)")
+    add_common_args(channel_parser)
+    channel_parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint JSON file for crash-resumable batching")
+    channel_parser.add_argument("--auto-resume", action="store_true", help="Auto-retry on crash (requires --checkpoint)")
+    channel_parser.add_argument("--max-retries", type=int, default=3, help="Max retry attempts (default: 3)")
+    channel_parser.add_argument("--retry-delay", type=float, default=5.0, help="Seconds to wait before retry (default: 5.0)")
+
+    # --- playlist subcommand ---
+    playlist_parser = subparsers.add_parser(
+        "playlist",
+        help="Scrape all videos from a YouTube playlist",
+        description="Discover video IDs from a playlist and scrape them all concurrently.",
     )
-    batch_parser.add_argument(
-        "--max-retries",
-        type=int,
-        default=3,
-        help="Max retry attempts when --auto-resume is enabled (default: 3).",
-    )
-    batch_parser.add_argument(
-        "--retry-delay",
-        type=float,
-        default=5.0,
-        help="Seconds to wait before retrying after a crash (default: 5.0).",
-    )
+    playlist_parser.add_argument("playlist", help="Playlist URL or ID (PLxxxx)")
+    playlist_parser.add_argument("--max-videos", type=int, default=100, help="Max videos to discover (default: 100)")
+    playlist_parser.add_argument("--workers", type=int, default=3, help="Max concurrent browser instances (default: 3)")
+    playlist_parser.add_argument("--batch-delay", type=float, default=2.0, help="Delay between starting each task (default: 2.0)")
+    add_common_args(playlist_parser)
+    playlist_parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint JSON file for crash-resumable batching")
+    playlist_parser.add_argument("--auto-resume", action="store_true", help="Auto-retry on crash (requires --checkpoint)")
+    playlist_parser.add_argument("--max-retries", type=int, default=3, help="Max retry attempts (default: 3)")
+    playlist_parser.add_argument("--retry-delay", type=float, default=5.0, help="Seconds to wait before retry (default: 5.0)")
 
     return parser
 
@@ -106,12 +116,16 @@ def main(argv: list[str] | None = None) -> int:
         return _run_video_command(args)
     if args.command == "batch":
         return _run_batch_command(args)
+    if args.command == "channel":
+        return _run_channel_command(args)
+    if args.command == "playlist":
+        return _run_playlist_command(args)
     return 1
 
 
-def _run_video_command(args: argparse.Namespace) -> int:
-    """Execute the ``video`` subcommand."""
-    config = ScraperConfig(
+def _make_config(args: argparse.Namespace, batch: bool = False) -> ScraperConfig:
+    """Build ScraperConfig from CLI args."""
+    kwargs: dict = dict(
         headless=not args.no_headless,
         timeout=args.timeout,
         max_comments=max(0, args.comments),
@@ -119,6 +133,24 @@ def _run_video_command(args: argparse.Namespace) -> int:
         request_delay=max(0.0, args.request_delay),
         max_page_retries=max(0, args.retries),
     )
+    if batch:
+        kwargs["max_workers"] = max(1, args.workers)
+        kwargs["batch_delay"] = max(0.0, args.batch_delay)
+    return ScraperConfig(**kwargs)
+
+
+def _write_output(content: str, args: argparse.Namespace) -> None:
+    """Write content to file or stdout."""
+    if args.out:
+        args.out.write_text(content + "\n", encoding="utf-8")
+        print(f"Wrote {args.out}")
+    else:
+        print(content)
+
+
+def _run_video_command(args: argparse.Namespace) -> int:
+    """Execute the ``video`` subcommand."""
+    config = _make_config(args)
 
     try:
         with YouTubeScraper(config) as scraper:
@@ -127,21 +159,19 @@ def _run_video_command(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    indent = 2 if args.pretty or args.out else None
-    payload = json.dumps(result.to_dict(), ensure_ascii=False, indent=indent)
-
-    if args.out:
-        args.out.write_text(payload + "\n", encoding="utf-8")
-        print(f"Wrote {args.out}")
+    if args.format == "json":
+        indent = 2 if args.pretty or args.out else None
+        payload = json.dumps(result.to_dict(), ensure_ascii=False, indent=indent)
+        _write_output(payload, args)
     else:
-        print(payload)
+        content = export_video(result, format=args.format, comments=args.comments_csv)
+        _write_output(content, args)
 
     return 0
 
 
 def _run_batch_command(args: argparse.Namespace) -> int:
     """Execute the ``batch`` subcommand."""
-    # Collect URLs from arguments and/or file
     urls: list[str] = list(args.urls) if args.urls else []
     if args.file:
         file_urls = [
@@ -155,16 +185,49 @@ def _run_batch_command(args: argparse.Namespace) -> int:
         print("Error: no URLs provided. Pass URLs as arguments or use --file.", file=sys.stderr)
         return 1
 
-    config = ScraperConfig(
-        headless=not args.no_headless,
-        timeout=args.timeout,
-        max_comments=max(0, args.comments),
-        transcript_language=args.lang,
-        request_delay=max(0.0, args.request_delay),
-        max_page_retries=max(0, args.retries),
-        max_workers=max(1, args.workers),
-        batch_delay=max(0.0, args.batch_delay),
-    )
+    return _run_batch_scrape(args, urls)
+
+
+def _run_channel_command(args: argparse.Namespace) -> int:
+    """Execute the ``channel`` subcommand."""
+    config = _make_config(args, batch=True)
+
+    def progress(idx: int, total: int, video_id: str, status: str) -> None:
+        print(f"  [{idx}/{total}] {status.upper():5s} — {video_id}", file=sys.stderr)
+
+    print(f"Discovering videos from channel: {args.channel}...", file=sys.stderr)
+
+    with YouTubeScraper(config) as scraper:
+        video_ids = scraper.get_channel_video_ids(args.channel, args.max_videos)
+
+    if not video_ids:
+        print("No videos found on this channel.", file=sys.stderr)
+        return 1
+
+    print(f"Found {len(video_ids)} videos. Starting batch scrape...", file=sys.stderr)
+    return _run_batch_scrape(args, video_ids)
+
+
+def _run_playlist_command(args: argparse.Namespace) -> int:
+    """Execute the ``playlist`` subcommand."""
+    config = _make_config(args, batch=True)
+
+    print(f"Discovering videos from playlist: {args.playlist}...", file=sys.stderr)
+
+    with YouTubeScraper(config) as scraper:
+        video_ids = scraper.get_playlist_video_ids(args.playlist, args.max_videos)
+
+    if not video_ids:
+        print("No videos found in this playlist.", file=sys.stderr)
+        return 1
+
+    print(f"Found {len(video_ids)} videos. Starting batch scrape...", file=sys.stderr)
+    return _run_batch_scrape(args, video_ids)
+
+
+def _run_batch_scrape(args: argparse.Namespace, urls: list[str]) -> int:
+    """Shared logic for batch, channel, and playlist subcommands."""
+    config = _make_config(args, batch=True)
 
     def progress(idx: int, total: int, video_id: str, status: str) -> None:
         print(f"  [{idx}/{total}] {status.upper():5s} — {video_id}", file=sys.stderr)
@@ -195,14 +258,13 @@ def _run_batch_command(args: argparse.Namespace) -> int:
 
     print(f"\nDone: {batch.succeeded} succeeded, {batch.failed} failed, {batch.elapsed_seconds}s", file=sys.stderr)
 
-    indent = 2 if args.pretty or args.out else None
-    payload = json.dumps(batch.to_dict(), ensure_ascii=False, indent=indent)
-
-    if args.out:
-        args.out.write_text(payload + "\n", encoding="utf-8")
-        print(f"Wrote {args.out}")
+    if args.format == "json":
+        indent = 2 if args.pretty or args.out else None
+        payload = json.dumps(batch.to_dict(), ensure_ascii=False, indent=indent)
+        _write_output(payload, args)
     else:
-        print(payload)
+        content = export_batch(batch, format=args.format, comments=args.comments_csv)
+        _write_output(content, args)
 
     return 0 if batch.failed == 0 else 1
 

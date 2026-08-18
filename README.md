@@ -247,6 +247,131 @@ yt-network-scraper batch --file urls.txt --workers 4 \
     --out batch.json
 ```
 
+### Channel & Playlist Scraping
+
+Scrape all videos from a YouTube channel or playlist in one command. The scraper discovers video IDs from the channel/playlist page, then batch scrapes them concurrently:
+
+```python
+with YouTubeScraper(config) as scraper:
+    # Scrape up to 50 videos from a channel
+    batch = scraper.scrape_channel("@handle", max_videos=50)
+
+    # Scrape all videos from a playlist
+    batch = scraper.scrape_playlist("PLxxxx", max_videos=100)
+
+    print(f"Scraped {batch.succeeded} videos from {batch.total} discovered")
+```
+
+**CLI:**
+
+```bash
+# Scrape all videos from a channel
+yt-network-scraper channel "@mkbhd" --max-videos 50 --workers 4 --out channel.json
+
+# Scrape all videos from a playlist
+yt-network-scraper playlist "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf" --workers 4 --out playlist.json
+
+# With crash recovery
+yt-network-scraper channel "@handle" --auto-resume --checkpoint progress.json --out channel.json
+```
+
+### Multi-Format Export (CSV, JSONL, TXT)
+
+Export scraped data to formats commonly used by researchers and data analysts:
+
+```python
+from yt_network_scraper import export_video, export_batch
+
+# Single video
+csv_data = export_video(result, format="csv")           # metadata CSV
+comments_csv = export_video(result, format="csv", comments=True)  # comments CSV
+txt_data = export_video(result, format="txt")           # transcript TXT
+jsonl_data = export_video(result, format="jsonl")       # JSONL (one line)
+
+# Batch
+batch_csv = export_batch(batch, format="csv")           # one row per video
+batch_comments_csv = export_batch(batch, format="csv", comments=True)  # all comments
+batch_jsonl = export_batch(batch, format="jsonl")       # one JSON per line
+```
+
+**CLI:**
+
+```bash
+# Export to CSV
+yt-network-scraper video "URL" --format csv --out result.csv
+
+# Export comments to CSV
+yt-network-scraper video "URL" --format csv --comments-csv --out comments.csv
+
+# Export transcript to TXT
+yt-network-scraper video "URL" --format txt --out transcript.txt
+
+# Export batch to CSV
+yt-network-scraper batch --file urls.txt --format csv --out batch.csv
+
+# Export all comments from batch to CSV
+yt-network-scraper batch --file urls.txt --format csv --comments-csv --out all_comments.csv
+```
+
+### Sentiment Analysis
+
+Built-in lexicon-based sentiment scoring for comments — no external dependencies (NLTK, transformers) required:
+
+```python
+from yt_network_scraper import analyze_sentiment, analyze_video_sentiment
+
+# Analyze a single text
+result = analyze_sentiment("This video is amazing and very helpful!")
+print(result.label)       # "positive"
+print(result.compound)    # 0.85
+
+# Analyze all comments in a video
+sentiment = analyze_video_sentiment(video_result)
+print(sentiment.overall_label)      # "positive"
+print(sentiment.positive_count)     # 15
+print(sentiment.negative_count)     # 3
+print(sentiment.neutral_count)      # 7
+print(sentiment.average_compound)   # 0.42
+
+# Per-comment breakdown
+for cs in sentiment.comment_sentiments:
+    print(f"  {cs.comment.author}: {cs.sentiment.label} ({cs.sentiment.compound:.2f})")
+```
+
+The sentiment scorer uses a curated lexicon of positive/negative words with negation handling ("not good" → negative) and booster amplification ("very good" → more positive). Scores range from -1.0 (very negative) to +1.0 (very positive).
+
+### Comment Filtering
+
+Filter comments by keyword, author, likes, date range, sentiment, or regex:
+
+```python
+from yt_network_scraper import filter_comments, search_comments, top_comments, CommentFilter
+
+# Filter by keyword
+filtered = filter_comments(result, keyword="python")
+
+# Filter by author
+filtered = filter_comments(result, author="john")
+
+# Filter by likes range
+filtered = filter_comments(result, min_likes=10, max_likes=100)
+
+# Filter by sentiment
+filtered = filter_comments(result, sentiment="positive")
+
+# Filter by regex
+filtered = filter_comments(result, regex=r"python|tutorial")
+
+# Combined filters
+filtered = filter_comments(result, keyword="great", min_likes=5, sentiment="positive")
+
+# Quick search
+results = search_comments(result, "tutorial")
+
+# Top comments by likes
+top = top_comments(result, n=10)
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

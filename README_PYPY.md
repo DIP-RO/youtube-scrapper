@@ -180,6 +180,198 @@ yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.j
 yt-network-scraper batch --file urls.txt --workers 3 --comments 50 --out batch.json
 ```
 
+### Crash-Resumable Checkpointing
+
+For large batches, use a **checkpoint file** to save progress incrementally. If the process crashes or you stop it, re-running with the same checkpoint file skips already-completed videos:
+
+```python
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape(
+        urls,
+        checkpoint="batch_progress.json",  # saves after each video
+    )
+    # If this crashes at video #50, re-running the same command
+    # will skip videos 1-49 and resume from #50
+```
+
+**CLI with checkpoint:**
+
+```bash
+# First run — crashes or is interrupted
+yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+
+# Re-run — skips completed videos automatically
+yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+```
+
+The checkpoint file is a JSON file that records each video's status (`ok` or `error`) and result data. It's written atomically after each video completes, so progress is never lost.
+
+### Auto-Resume (Automatic Crash Recovery)
+
+For production workloads, use `batch_scrape_resilient` to automatically recover from any crash — browser failures, network errors, even Ctrl+C. The supervisor catches the crash, waits, and retries from the checkpoint. Previously failed videos are retried. The user never sees an unhandled error:
+
+```python
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape_resilient(
+        urls,
+        checkpoint="progress.json",
+        max_retries=5,       # retry up to 5 times
+        retry_delay=10.0,    # wait 10s between retries
+    )
+    # Even if the process crashes 3 times, it auto-resumes
+    # and returns the complete result.
+    print(f"Done: {batch.succeeded} ok, {batch.failed} failed")
+```
+
+**How it works:**
+
+```
+Attempt 1: Scrape 100 videos → videos 1-50 succeed → CRASH at #51
+    ↓ (auto-caught, wait 10s)
+Attempt 2: Skip 1-50 (checkpoint) → retry #51-100 → #51-80 succeed → CRASH at #81
+    ↓ (auto-caught, wait 10s)
+Attempt 3: Skip 1-80 → retry #81-100 → all succeed → DONE
+    ↓
+Return BatchResult (100 succeeded, 0 failed)
+```
+
+**CLI with auto-resume:**
+
+```bash
+# Automatically retries on any crash — no manual intervention needed
+yt-network-scraper batch --file urls.txt --workers 4 \
+    --checkpoint progress.json \
+    --auto-resume \
+    --max-retries 5 \
+    --retry-delay 10 \
+    --out batch.json
+```
+
+### Channel & Playlist Scraping
+
+Scrape all videos from a YouTube channel or playlist in one command. The scraper discovers video IDs from the channel/playlist page, then batch scrapes them concurrently:
+
+```python
+with YouTubeScraper(config) as scraper:
+    # Scrape up to 50 videos from a channel
+    batch = scraper.scrape_channel("@handle", max_videos=50)
+
+    # Scrape all videos from a playlist
+    batch = scraper.scrape_playlist("PLxxxx", max_videos=100)
+
+    print(f"Scraped {batch.succeeded} videos from {batch.total} discovered")
+```
+
+**CLI:**
+
+```bash
+# Scrape all videos from a channel
+yt-network-scraper channel "@mkbhd" --max-videos 50 --workers 4 --out channel.json
+
+# Scrape all videos from a playlist
+yt-network-scraper playlist "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf" --workers 4 --out playlist.json
+
+# With crash recovery
+yt-network-scraper channel "@handle" --auto-resume --checkpoint progress.json --out channel.json
+```
+
+### Multi-Format Export (CSV, JSONL, TXT)
+
+Export scraped data to formats commonly used by researchers and data analysts:
+
+```python
+from yt_network_scraper import export_video, export_batch
+
+# Single video
+csv_data = export_video(result, format="csv")           # metadata CSV
+comments_csv = export_video(result, format="csv", comments=True)  # comments CSV
+txt_data = export_video(result, format="txt")           # transcript TXT
+jsonl_data = export_video(result, format="jsonl")       # JSONL (one line)
+
+# Batch
+batch_csv = export_batch(batch, format="csv")           # one row per video
+batch_comments_csv = export_batch(batch, format="csv", comments=True)  # all comments
+batch_jsonl = export_batch(batch, format="jsonl")       # one JSON per line
+```
+
+**CLI:**
+
+```bash
+# Export to CSV
+yt-network-scraper video "URL" --format csv --out result.csv
+
+# Export comments to CSV
+yt-network-scraper video "URL" --format csv --comments-csv --out comments.csv
+
+# Export transcript to TXT
+yt-network-scraper video "URL" --format txt --out transcript.txt
+
+# Export batch to CSV
+yt-network-scraper batch --file urls.txt --format csv --out batch.csv
+
+# Export all comments from batch to CSV
+yt-network-scraper batch --file urls.txt --format csv --comments-csv --out all_comments.csv
+```
+
+### Sentiment Analysis
+
+Built-in lexicon-based sentiment scoring for comments — no external dependencies (NLTK, transformers) required:
+
+```python
+from yt_network_scraper import analyze_sentiment, analyze_video_sentiment
+
+# Analyze a single text
+result = analyze_sentiment("This video is amazing and very helpful!")
+print(result.label)       # "positive"
+print(result.compound)    # 0.85
+
+# Analyze all comments in a video
+sentiment = analyze_video_sentiment(video_result)
+print(sentiment.overall_label)      # "positive"
+print(sentiment.positive_count)     # 15
+print(sentiment.negative_count)     # 3
+print(sentiment.neutral_count)      # 7
+print(sentiment.average_compound)   # 0.42
+
+# Per-comment breakdown
+for cs in sentiment.comment_sentiments:
+    print(f"  {cs.comment.author}: {cs.sentiment.label} ({cs.sentiment.compound:.2f})")
+```
+
+The sentiment scorer uses a curated lexicon of positive/negative words with negation handling ("not good" → negative) and booster amplification ("very good" → more positive). Scores range from -1.0 (very negative) to +1.0 (very positive).
+
+### Comment Filtering
+
+Filter comments by keyword, author, likes, date range, sentiment, or regex:
+
+```python
+from yt_network_scraper import filter_comments, search_comments, top_comments, CommentFilter
+
+# Filter by keyword
+filtered = filter_comments(result, keyword="python")
+
+# Filter by author
+filtered = filter_comments(result, author="john")
+
+# Filter by likes range
+filtered = filter_comments(result, min_likes=10, max_likes=100)
+
+# Filter by sentiment
+filtered = filter_comments(result, sentiment="positive")
+
+# Filter by regex
+filtered = filter_comments(result, regex=r"python|tutorial")
+
+# Combined filters
+filtered = filter_comments(result, keyword="great", min_likes=5, sentiment="positive")
+
+# Quick search
+results = search_comments(result, "tutorial")
+
+# Top comments by likes
+top = top_comments(result, n=10)
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:
@@ -363,6 +555,35 @@ The return type of `get_video()`. Contains:
 | `engagement` | `Engagement` | Likes, views, dislikes, comment counts |
 | `transcript` | `Transcript` | Transcript segments and full text |
 | `summary` | `Summary` | Extractive summary |
+| `comments` | `list[Comment]` | Scraped comments |
+| `network` | `NetworkInfo` | Diagnostic info about the scraping process |
+
+Call `result.to_dict()` to serialize the entire result to a JSON-compatible dictionary.
+
+### Exceptions
+
+```python
+from yt_network_scraper import (
+    ScraperError,              # Base exception
+    InvalidVideoURLError,      # URL/ID could not be parsed
+    AccessBlockedException,    # YouTube returned an access challenge
+    SeleniumNotInstalledError, # Selenium is not installed
+    BrowserNotInitializedError, # Not used as a context manager
+)
+```
+
+## CLI Usage
+
+```bash
+# Scrape a video and print JSON to stdout
+yt-network-scraper video "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Save to a file with pretty-printing
+yt-network-scraper video VIDEO_ID --out result.json --pretty
+
+# Fetch up to 100 comments in French
+yt-network-scraper video VIDEO_ID --comments 100 --lang fr
+
 # Show Chrome (for debugging)
 yt-network-scraper video VIDEO_ID --no-headless
 
@@ -383,90 +604,6 @@ All configuration is done through the `ScraperConfig` dataclass:
 | `request_delay` | `1.5` | Base delay between fallback network requests (seconds) |
 | `max_page_retries` | `2` | Number of retries when YouTube returns a block page |
 | `user_agent` | Chrome 125 UA | User-Agent string for the browser and HTTP session |
-
-## Package Architecture
-
-The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
-
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.png" alt="Module dependency graph" width="680" />
-
-| Module | Responsibility |
-|--------|---------------|
-| `__init__.py` | Public API exports — `YouTubeScraper`, `ScraperConfig`, all models, all exceptions |
-| `client.py` | HTTP/network layer — Selenium browser lifecycle, Chrome DevTools log capture, innertube API calls, Return YouTube Dislike API integration |
-| `scraper.py` | Orchestration layer — coordinates the full scrape workflow: load page → capture network → parse metadata → fetch transcript → fetch comments → fetch dislikes → generate summary → build `VideoResult` |
-| `parsing.py` | Pure parsing functions — extracts metadata, transcript, comments, and access-block status from YouTube JSON payloads. No network calls. |
-| `models.py` | Typed dataclass models — `VideoResult`, `VideoMetadata`, `Transcript`, `TranscriptSegment`, `Comment`, `Engagement`, `DislikeData`, `Summary`, `AccessStatus`, `NetworkInfo`. Each has `to_dict()` for JSON serialization. |
-| `exceptions.py` | Exception hierarchy — `ScraperError` (base), `InvalidVideoURLError`, `AccessBlockedException`, `SeleniumNotInstalledError`, `BrowserNotInitializedError`, `TranscriptUnavailableError` |
-| `utils.py` | Utilities — URL validation, video ID extraction, text summarization, sentence splitting, key lookup helpers, HTML unescaping |
-| `cli.py` | Command-line interface — argparse-based CLI with `video` subcommand |
-
-### How a scrape works
-
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.png" alt="Scrape flowchart" width="820" />
-
-### Design principles
-
-- **Network layer is isolated** — all Selenium and HTTP calls live in `client.py`. Parsing functions in `parsing.py` are pure and take dicts as input, making them trivial to test with fixtures.
-- **Typed models everywhere** — the scraper never returns raw dicts. Every result is a typed dataclass with documented fields, optional fields are `None` when unavailable, and `to_dict()` produces clean JSON.
-- **Defensive parsing** — YouTube changes payload shapes frequently. Every parser uses safe key lookups (`find_key`, `find_all_keys`) and returns `None` or empty lists for missing fields instead of raising exceptions.
-- **No bot evasion** — the scraper detects access blocks but never tries to bypass them. If YouTube returns a CAPTCHA or consent wall, the `network.access_status` field reports it and the scrape completes with available data.
-- **Configurable behavior** — `ScraperConfig` controls headless mode, timeout, retries, delays, comment limits, transcript language, and user agent. Sensible defaults work for most cases.
-
-## Error Handling
-
-The scraper uses a typed exception hierarchy. All exceptions inherit from `ScraperError`:
-
-```python
-from yt_network_scraper import YouTubeScraper, ScraperError
-
-try:
-    with YouTubeScraper() as scraper:
-        result = scraper.get_video("bad_url")
-except ScraperError as e:
-    print(f"Scraping failed: {e}")
-```
-
-The scraper is designed to be **defensive** — YouTube frequently changes internal payload shapes. Missing fields are returned as `None` or empty lists rather than raising exceptions. The `network.access_status` field in the result indicates whether YouTube returned an access challenge.
-
-## Development
-
-```bash
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in development mode with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run tests with coverage
-pytest --cov=yt_network_scraper
-
-# Build the package
-python -m build
-
-# Validate the build
-twine check dist/*
-```
-
-## Running Tests
-
-```bash
-pytest
-```
-
-The test suite uses mocked HTTP responses and mocked Selenium drivers — no live YouTube requests or browser instances are required. Tests cover:
-
-- Package imports and public API surface
-- Data model serialization
-- URL parsing and ID extraction
-- YouTube payload parsing (metadata, transcripts, comments)
-- Network fetching with mocked sessions (success, errors, edge cases)
-- Client orchestration with mocked Selenium
-- CLI argument parsing and output
 
 ## License
 

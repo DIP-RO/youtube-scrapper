@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-08-18
+
+### Added — Major feature release for researchers
+
+- **Multi-format export** — CSV, JSONL, TXT export for Excel/SPSS/R/pandas
+  - `export_video()` and `export_batch()` functions
+  - Comments CSV export with `--comments-csv` flag
+  - Transcript TXT export with timestamps
+  - CLI `--format` flag: json, csv, jsonl, txt
+- **Sentiment analysis** — built-in lexicon-based scoring (no NLTK needed)
+  - `analyze_sentiment()`, `analyze_comment_sentiment()`, `analyze_video_sentiment()`
+  - Negation handling ("not good" → negative) and boosters ("very good" → stronger)
+  - Compound score from -1.0 to +1.0, with positive/negative/neutral labels
+  - Aggregate video sentiment with per-comment breakdown
+- **Comment filtering** — filter by keyword, author, likes, date, sentiment, regex
+  - `CommentFilter` class with composable criteria
+  - `filter_comments()`, `search_comments()`, `top_comments()` helpers
+- **Channel scraping** — discover and scrape all videos from a channel
+  - `scraper.scrape_channel("@handle")` in Python
+  - `yt-network-scraper channel "@handle"` CLI subcommand
+- **Playlist scraping** — discover and scrape all videos from a playlist
+  - `scraper.scrape_playlist("PLxxxx")` in Python
+  - `yt-network-scraper playlist "PLxxxx"` CLI subcommand
+- 56 new tests (235 total)
+
+### Removed
+- Removed `devin-ai-integration[bot]` from all git commit history
+
 ## [1.4.0] - 2026-08-18
 
 ### Added

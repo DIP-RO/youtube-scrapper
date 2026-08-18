@@ -53,7 +53,7 @@ from .parsing import (
     parse_metadata,
 )
 from .scraper import fetch_comment_data, fetch_dislikes, fetch_transcript
-from .utils import detect_access_block, extract_video_id, int_or_none, summarize_text
+from .utils import detect_access_block, extract_video_id, find_all_keys, find_key, int_or_none, summarize_text
 
 logger = logging.getLogger(__name__)
 
@@ -568,6 +568,188 @@ class YouTubeScraper:
                     error_message=entry.get("error_message", ""),
                 ))
         return results, errors
+
+    # -- Channel / Playlist discovery ------------------------------------
+
+    def get_channel_video_ids(
+        self,
+        channel_url_or_id: str,
+        max_videos: int = 50,
+    ) -> list[str]:
+        """Discover video IDs from a YouTube channel.
+
+        Navigates to the channel's videos page and extracts video IDs from
+        the page's initial data payload. No scrolling is performed — this
+        captures the first page of videos (typically 30-50 videos).
+
+        Args:
+            channel_url_or_id: Channel URL (e.g. ``https://www.youtube.com/@handle``),
+                channel ID (e.g. ``UCxxxx``), or ``@handle``.
+            max_videos: Maximum number of video IDs to return.
+
+        Returns:
+            List of 11-character video IDs.
+
+        Raises:
+            InvalidVideoURLError: If the channel URL cannot be parsed.
+            BrowserNotInitializedError: If not used as a context manager.
+        """
+        if self.driver is None:
+            raise BrowserNotInitializedError("YouTubeScraper must be used as a context manager")
+
+        # Normalize channel URL
+        if channel_url_or_id.startswith("@"):
+            videos_url = f"https://www.youtube.com/{channel_url_or_id}/videos"
+        elif "youtube.com" in channel_url_or_id:
+            base = channel_url_or_id.rstrip("/")
+            if "/videos" not in base:
+                base = base + "/videos"
+            videos_url = base
+        elif channel_url_or_id.startswith("UC"):
+            videos_url = f"https://www.youtube.com/channel/{channel_url_or_id}/videos"
+        else:
+            videos_url = f"https://www.youtube.com/@{channel_url_or_id}/videos"
+
+        html, _ = self._load_watch_html(videos_url)
+        initial = extract_json_assignment(html, "ytInitialData") or {}
+
+        # Extract video IDs from the channel page's renderers
+        video_ids: list[str] = []
+        seen: set[str] = set()
+
+        # Look for videoId in various renderer types
+        for vid_id in find_all_keys(initial, "videoId"):
+            if isinstance(vid_id, str) and len(vid_id) == 11 and vid_id not in seen:
+                seen.add(vid_id)
+                video_ids.append(vid_id)
+                if len(video_ids) >= max_videos:
+                    break
+
+        return video_ids
+
+    def get_playlist_video_ids(
+        self,
+        playlist_url_or_id: str,
+        max_videos: int = 100,
+    ) -> list[str]:
+        """Discover video IDs from a YouTube playlist.
+
+        Navigates to the playlist page and extracts video IDs from the
+        page's initial data payload.
+
+        Args:
+            playlist_url_or_id: Playlist URL (e.g.
+                ``https://www.youtube.com/playlist?list=PLxxxx``) or
+                bare playlist ID (e.g. ``PLxxxx``).
+            max_videos: Maximum number of video IDs to return.
+
+        Returns:
+            List of 11-character video IDs.
+
+        Raises:
+            InvalidVideoURLError: If the playlist URL cannot be parsed.
+            BrowserNotInitializedError: If not used as a context manager.
+        """
+        if self.driver is None:
+            raise BrowserNotInitializedError("YouTubeScraper must be used as a context manager")
+
+        # Normalize playlist URL
+        if playlist_url_or_id.startswith("PL") or playlist_url_or_id.startswith("OL") or playlist_url_or_id.startswith("RD"):
+            playlist_url = f"https://www.youtube.com/playlist?list={playlist_url_or_id}"
+        elif "list=" in playlist_url_or_id:
+            playlist_url = playlist_url_or_id
+        else:
+            playlist_url = f"https://www.youtube.com/playlist?list={playlist_url_or_id}"
+
+        html, _ = self._load_watch_html(playlist_url)
+        initial = extract_json_assignment(html, "ytInitialData") or {}
+
+        video_ids: list[str] = []
+        seen: set[str] = set()
+
+        for vid_id in find_all_keys(initial, "videoId"):
+            if isinstance(vid_id, str) and len(vid_id) == 11 and vid_id not in seen:
+                seen.add(vid_id)
+                video_ids.append(vid_id)
+                if len(video_ids) >= max_videos:
+                    break
+
+        return video_ids
+
+    def scrape_channel(
+        self,
+        channel_url_or_id: str,
+        max_videos: int = 30,
+        max_workers: int | None = None,
+        batch_delay: float | None = None,
+        checkpoint: str | None = None,
+        progress_callback: Any = None,
+    ) -> BatchResult:
+        """Discover and scrape all videos from a YouTube channel.
+
+        Combines :meth:`get_channel_video_ids` and :meth:`batch_scrape`
+        in one call. Discovers video IDs from the channel, then scrapes
+        each video concurrently.
+
+        Args:
+            channel_url_or_id: Channel URL, ID, or @handle.
+            max_videos: Max videos to discover from the channel.
+            max_workers: Concurrent browser instances.
+            batch_delay: Delay between starting each task.
+            checkpoint: Optional checkpoint path for crash recovery.
+            progress_callback: Optional progress callback.
+
+        Returns:
+            A :class:`BatchResult` with all scraped videos.
+        """
+        video_ids = self.get_channel_video_ids(channel_url_or_id, max_videos)
+        if not video_ids:
+            return BatchResult(total=0)
+        logging.info("Found %d videos on channel", len(video_ids))
+        return self.batch_scrape(
+            video_ids,
+            max_workers=max_workers,
+            batch_delay=batch_delay,
+            checkpoint=checkpoint,
+            progress_callback=progress_callback,
+        )
+
+    def scrape_playlist(
+        self,
+        playlist_url_or_id: str,
+        max_videos: int = 100,
+        max_workers: int | None = None,
+        batch_delay: float | None = None,
+        checkpoint: str | None = None,
+        progress_callback: Any = None,
+    ) -> BatchResult:
+        """Discover and scrape all videos from a YouTube playlist.
+
+        Combines :meth:`get_playlist_video_ids` and :meth:`batch_scrape`
+        in one call.
+
+        Args:
+            playlist_url_or_id: Playlist URL or ID.
+            max_videos: Max videos to discover from the playlist.
+            max_workers: Concurrent browser instances.
+            batch_delay: Delay between starting each task.
+            checkpoint: Optional checkpoint path for crash recovery.
+            progress_callback: Optional progress callback.
+
+        Returns:
+            A :class:`BatchResult` with all scraped videos.
+        """
+        video_ids = self.get_playlist_video_ids(playlist_url_or_id, max_videos)
+        if not video_ids:
+            return BatchResult(total=0)
+        logging.info("Found %d videos in playlist", len(video_ids))
+        return self.batch_scrape(
+            video_ids,
+            max_workers=max_workers,
+            batch_delay=batch_delay,
+            checkpoint=checkpoint,
+            progress_callback=progress_callback,
+        )
 
     @staticmethod
     def _deserialize_result(data: dict) -> VideoResult:
