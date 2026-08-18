@@ -20,6 +20,7 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -265,6 +266,7 @@ class YouTubeScraper:
         max_workers: int | None = None,
         batch_delay: float | None = None,
         progress_callback: Any = None,
+        checkpoint: str | None = None,
     ) -> BatchResult:
         """Scrape multiple YouTube videos concurrently.
 
@@ -278,6 +280,9 @@ class YouTubeScraper:
             batch_delay: Override delay between starting each task (default: config.batch_delay).
             progress_callback: Optional callable ``(index, total, video_id, status)`` called
                 after each video completes. ``status`` is ``"ok"`` or ``"error"``.
+            checkpoint: Optional path to a JSON file for crash-resumable batching.
+                Completed results are saved incrementally. If the file already
+                exists, already-completed videos are skipped on re-run.
 
         Returns:
             A :class:`BatchResult` with successful results and errors.
@@ -298,15 +303,49 @@ class YouTubeScraper:
         """
         workers = max_workers or self.config.max_workers
         delay = batch_delay if batch_delay is not None else self.config.batch_delay
+
+        # --- Checkpoint: load existing progress ---
+        checkpoint_data: dict[str, dict] = {}
+        if checkpoint:
+            cp_path = Path(checkpoint)
+            if cp_path.exists():
+                try:
+                    checkpoint_data = json.loads(cp_path.read_text(encoding="utf-8"))
+                    logging.info("Loaded checkpoint: %d completed videos", len(checkpoint_data))
+                except (json.JSONDecodeError, OSError):
+                    checkpoint_data = {}
+
+        # Separate already-completed from pending
+        completed_urls: set[str] = set(checkpoint_data.keys())
+        pending_urls = [u for u in urls_or_ids if u not in completed_urls]
+        skipped = len(urls_or_ids) - len(pending_urls)
+
         total = len(urls_or_ids)
         results: list[VideoResult] = []
         errors: list[BatchError] = []
         start_time = time.time()
 
+        # Load checkpointed results into the results list
+        for url_or_id in urls_or_ids:
+            if url_or_id in checkpoint_data:
+                cp_entry = checkpoint_data[url_or_id]
+                if cp_entry.get("status") == "ok" and "result" in cp_entry:
+                    results.append(self._deserialize_result(cp_entry["result"]))
+
+        def _save_checkpoint() -> None:
+            """Atomically save current progress to checkpoint file."""
+            if not checkpoint:
+                return
+            data = dict(checkpoint_data)
+            cp_path = Path(checkpoint)
+            cp_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = cp_path.with_suffix(cp_path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp_path.replace(cp_path)
+
         def _scrape_one(url_or_id: str) -> tuple[str, VideoResult | None, BatchError | None]:
             """Scrape a single video in its own browser instance."""
             try:
-                # Each thread gets its own YouTubeScraper with the same config
                 scraper = YouTubeScraper(self.config)
                 scraper.__enter__()
                 try:
@@ -327,25 +366,39 @@ class YouTubeScraper:
                     error_message=str(exc),
                 )
 
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {}
-            for i, url_or_id in enumerate(urls_or_ids):
-                if i > 0 and delay > 0:
-                    time.sleep(delay)
-                future = executor.submit(_scrape_one, url_or_id)
-                futures[future] = url_or_id
+        if pending_urls:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {}
+                for i, url_or_id in enumerate(pending_urls):
+                    if i > 0 and delay > 0:
+                        time.sleep(delay)
+                    future = executor.submit(_scrape_one, url_or_id)
+                    futures[future] = url_or_id
 
-            completed = 0
-            for future in as_completed(futures):
-                url_or_id, result, error = future.result()
-                completed += 1
-                if result is not None:
-                    results.append(result)
-                else:
-                    errors.append(error)  # type: ignore[arg-type]
-                if progress_callback is not None:
-                    status = "ok" if result is not None else "error"
-                    progress_callback(completed, total, url_or_id, status)
+                completed = 0
+                for future in as_completed(futures):
+                    url_or_id, result, error = future.result()
+                    completed += 1
+                    if result is not None:
+                        results.append(result)
+                        if checkpoint:
+                            checkpoint_data[url_or_id] = {
+                                "status": "ok",
+                                "result": result.to_dict(),
+                            }
+                    else:
+                        errors.append(error)  # type: ignore[arg-type]
+                        if checkpoint:
+                            checkpoint_data[url_or_id] = {
+                                "status": "error",
+                                "error_type": error.error_type,  # type: ignore[union-attr]
+                                "error_message": error.error_message,  # type: ignore[union-attr]
+                            }
+                    if checkpoint:
+                        _save_checkpoint()
+                    if progress_callback is not None:
+                        status = "ok" if result is not None else "error"
+                        progress_callback(completed + skipped, total, url_or_id, status)
 
         elapsed = time.time() - start_time
         return BatchResult(
@@ -355,6 +408,43 @@ class YouTubeScraper:
             results=results,
             errors=errors,
             elapsed_seconds=round(elapsed, 2),
+        )
+
+    @staticmethod
+    def _deserialize_result(data: dict) -> VideoResult:
+        """Reconstruct a VideoResult from a checkpoint dict (best-effort)."""
+        from .models import (
+            AccessStatus,
+            DislikeData,
+            Engagement,
+            NetworkInfo,
+            Summary,
+            Transcript,
+            VideoMetadata,
+        )
+
+        metadata = VideoMetadata(**data.get("metadata", {}))
+        engagement_data = data.get("engagement", {})
+        dislikes_data = engagement_data.pop("dislikes", None)
+        dislikes = DislikeData(**dislikes_data) if dislikes_data else None
+        engagement = Engagement(dislikes=dislikes, **engagement_data)
+        transcript = Transcript(**data.get("transcript", {}))
+        summary = Summary(**data.get("summary", {}))
+        network_data = data.get("network", {})
+        access_data = network_data.pop("access_status", {})
+        access_status = AccessStatus(**access_data)
+        network = NetworkInfo(access_status=access_status, **network_data)
+        comments = [Comment(**c) for c in data.get("comments", [])]
+
+        return VideoResult(
+            video_id=data.get("video_id", ""),
+            source_url=data.get("source_url", ""),
+            metadata=metadata,
+            engagement=engagement,
+            transcript=transcript,
+            summary=summary,
+            comments=comments,
+            network=network,
         )
 
     # -- Browser / network internals -------------------------------------

@@ -12,7 +12,17 @@ import pytest
 
 from yt_network_scraper.client import ScraperConfig, YouTubeScraper
 from yt_network_scraper.exceptions import InvalidVideoURLError
-from yt_network_scraper.models import BatchResult, BatchError, VideoResult
+from yt_network_scraper.models import (
+    BatchResult,
+    BatchError,
+    VideoResult,
+    VideoMetadata,
+    Engagement,
+    Transcript,
+    Summary,
+    NetworkInfo,
+    AccessStatus,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -207,3 +217,102 @@ class TestBatchScrape:
         # Should be JSON serializable
         json_str = json.dumps(d, ensure_ascii=False, default=str)
         assert isinstance(json_str, str)
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint functionality
+# ---------------------------------------------------------------------------
+
+class TestCheckpoint:
+    def _make_mock_result(self, video_id: str) -> VideoResult:
+        return VideoResult(
+            video_id=video_id,
+            source_url=f"https://www.youtube.com/watch?v={video_id}",
+            metadata=VideoMetadata(video_url=f"https://www.youtube.com/watch?v={video_id}", title=f"Test {video_id}"),
+            engagement=Engagement(comment_count_scraped=0),
+            transcript=Transcript(available=False),
+            summary=Summary(available=False, text=""),
+            comments=[],
+            network=NetworkInfo(access_status=AccessStatus(blocked=False)),
+        )
+
+    def test_checkpoint_creates_file(self, tmp_path):
+        """Checkpoint file is created with completed results."""
+        checkpoint_path = str(tmp_path / "checkpoint.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+        mock_result = self._make_mock_result("vid1")
+
+        with patch.object(YouTubeScraper, "get_video", return_value=mock_result):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(["vid1"], checkpoint=checkpoint_path)
+
+        import os
+        assert os.path.exists(checkpoint_path)
+        cp_data = json.loads(open(checkpoint_path).read())
+        assert "vid1" in cp_data
+        assert cp_data["vid1"]["status"] == "ok"
+
+    def test_checkpoint_skips_completed(self, tmp_path):
+        """Already-completed videos are skipped on re-run."""
+        checkpoint_path = str(tmp_path / "checkpoint.json")
+        # Pre-create checkpoint with vid1 already done (proper result dict)
+        mock_result = self._make_mock_result("vid1")
+        cp_data = {"vid1": {"status": "ok", "result": mock_result.to_dict()}}
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        # get_video should NOT be called for vid1
+        call_count = 0
+        def fake_get_video(url_or_id):
+            nonlocal call_count
+            call_count += 1
+            return self._make_mock_result(url_or_id)
+
+        with patch.object(YouTubeScraper, "get_video", side_effect=fake_get_video):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(["vid1", "vid2"], checkpoint=checkpoint_path)
+
+        # Only vid2 should have been scraped (vid1 was in checkpoint)
+        assert call_count == 1
+        assert batch.total == 2
+        assert batch.succeeded >= 1
+
+    def test_checkpoint_saves_errors(self, tmp_path):
+        """Failed videos are also saved to checkpoint."""
+        checkpoint_path = str(tmp_path / "checkpoint.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        def fake_get_video(url_or_id):
+            raise InvalidVideoURLError(f"Invalid: {url_or_id}")
+
+        with patch.object(YouTubeScraper, "get_video", side_effect=fake_get_video):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(["bad1"], checkpoint=checkpoint_path)
+
+        import os
+        assert os.path.exists(checkpoint_path)
+        cp_data = json.loads(open(checkpoint_path).read())
+        assert "bad1" in cp_data
+        assert cp_data["bad1"]["status"] == "error"
+        assert cp_data["bad1"]["error_type"] == "InvalidVideoURLError"
+
+    def test_checkpoint_no_file(self):
+        """Batch works fine without checkpoint."""
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+        mock_result = self._make_mock_result("vid1")
+
+        with patch.object(YouTubeScraper, "get_video", return_value=mock_result):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(["vid1"])
+
+        assert batch.succeeded == 1

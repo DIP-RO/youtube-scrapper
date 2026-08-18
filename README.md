@@ -180,6 +180,32 @@ yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.j
 yt-network-scraper batch --file urls.txt --workers 3 --comments 50 --out batch.json
 ```
 
+### Crash-Resumable Checkpointing
+
+For large batches, use a **checkpoint file** to save progress incrementally. If the process crashes or you stop it, re-running with the same checkpoint file skips already-completed videos:
+
+```python
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape(
+        urls,
+        checkpoint="batch_progress.json",  # saves after each video
+    )
+    # If this crashes at video #50, re-running the same command
+    # will skip videos 1-49 and resume from #50
+```
+
+**CLI with checkpoint:**
+
+```bash
+# First run — crashes or is interrupted
+yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+
+# Re-run — skips completed videos automatically
+yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json --out batch.json
+```
+
+The checkpoint file is a JSON file that records each video's status (`ok` or `error`) and result data. It's written atomically after each video completes, so progress is never lost.
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

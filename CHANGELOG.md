@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-18
+
+### Added
+- **Crash-resumable checkpointing** for batch scraping
+- `checkpoint` parameter on `batch_scrape()` — saves progress after each video
+- Already-completed videos are skipped on re-run
+- Atomic file writes (`.tmp` + rename) prevent checkpoint corruption
+- CLI `--checkpoint` flag for the `batch` subcommand
+- Failed videos are also checkpointed (status: `error`)
+- 4 new checkpoint tests (171 total)
+
+### Example
+```python
+# Crash at video #50? Re-run skips videos 1-49
+batch = scraper.batch_scrape(urls, checkpoint="progress.json")
+```
+
 ## [1.2.0] - 2026-08-18
 
 ### Added

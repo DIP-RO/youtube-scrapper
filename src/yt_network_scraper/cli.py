@@ -71,6 +71,12 @@ def build_parser() -> argparse.ArgumentParser:
     batch_parser.add_argument("--retries", type=int, default=2, help="Page-load retries (default: 2)")
     batch_parser.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping")
     batch_parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    batch_parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Path to checkpoint JSON file for crash-resumable batching. Completed videos are saved incrementally and skipped on re-run.",
+    )
 
     return parser
 
@@ -146,10 +152,13 @@ def _run_batch_command(args: argparse.Namespace) -> int:
     def progress(idx: int, total: int, video_id: str, status: str) -> None:
         print(f"  [{idx}/{total}] {status.upper():5s} — {video_id}", file=sys.stderr)
 
+    if args.checkpoint:
+        print(f"Checkpoint: {args.checkpoint}", file=sys.stderr)
+
     print(f"Scraping {len(urls)} videos with {config.max_workers} workers...", file=sys.stderr)
 
     with YouTubeScraper(config) as scraper:
-        batch = scraper.batch_scrape(urls, progress_callback=progress)
+        batch = scraper.batch_scrape(urls, progress_callback=progress, checkpoint=args.checkpoint)
 
     print(f"\nDone: {batch.succeeded} succeeded, {batch.failed} failed, {batch.elapsed_seconds}s", file=sys.stderr)
 
