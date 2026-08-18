@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-08-18
+
+### Changed
+- Removed CONTRIBUTING.md and SECURITY.md (project maintained privately by author)
+- Removed Contributing section from README
+- Simplified Attribution section to credit author only
+- Updated classifiers: Development Status changed to Production/Stable
+- Removed Intended Audience classifiers
+
 ## [1.1.0] - 2026-08-17
 
 ### Added
@@ -52,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT License
 - GitHub Actions CI workflow (tests on Python 3.10–3.13)
 - GitHub Actions publish workflow with PyPI Trusted Publishing
-- Professional README, CONTRIBUTING, SECURITY, and CHANGELOG documentation
+- Professional README and CHANGELOG documentation
 - `pyproject.toml` with full project metadata, classifiers, and optional dev dependencies
 
 ### Changed

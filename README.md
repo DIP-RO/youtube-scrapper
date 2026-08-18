@@ -449,17 +449,13 @@ The test suite uses mocked HTTP responses and mocked Selenium drivers — no liv
 - Client orchestration with mocked Selenium
 - CLI argument parsing and output
 
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Attribution
 
-This package was originally developed by Dipro Paul as a network-first YouTube scraper. The core scraping logic, parsing functions, and network-capture approach were preserved and reorganized into a clean, modular package structure with typed data models, comprehensive tests, and proper open-source packaging.
+Developed and maintained by Dipro Paul.
 
 ## Disclaimer
 
