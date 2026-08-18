@@ -316,3 +316,248 @@ class TestCheckpoint:
                     batch = scraper.batch_scrape(["vid1"])
 
         assert batch.succeeded == 1
+
+
+# ---------------------------------------------------------------------------
+# Resilient batch scraping (auto-retry on crash)
+# ---------------------------------------------------------------------------
+
+class TestBatchScrapeResilient:
+    def _make_mock_result(self, video_id: str) -> VideoResult:
+        return VideoResult(
+            video_id=video_id,
+            source_url=f"https://www.youtube.com/watch?v={video_id}",
+            metadata=VideoMetadata(video_url=f"https://www.youtube.com/watch?v={video_id}", title=f"Test {video_id}"),
+            engagement=Engagement(comment_count_scraped=0),
+            transcript=Transcript(available=False),
+            summary=Summary(available=False, text=""),
+            comments=[],
+            network=NetworkInfo(access_status=AccessStatus(blocked=False)),
+        )
+
+    def test_resilient_requires_checkpoint(self):
+        """batch_scrape_resilient raises ValueError without checkpoint."""
+        scraper = YouTubeScraper()
+        with pytest.raises(ValueError, match="checkpoint"):
+            scraper.batch_scrape_resilient(["vid1"])
+
+    def test_resilient_no_crash(self, tmp_path):
+        """Resilient batch completes normally when no crash occurs."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        mock_result = self._make_mock_result("vid1")
+
+        with patch.object(YouTubeScraper, "get_video", return_value=mock_result):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape_resilient(
+                        ["vid1"], checkpoint=checkpoint_path, max_retries=3, retry_delay=0
+                    )
+
+        assert batch.total == 1
+        assert batch.succeeded == 1
+        assert batch.failed == 0
+
+    def test_resilient_crash_then_recover(self, tmp_path):
+        """Resilient batch crashes on first attempt, succeeds on retry."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        # Pre-create checkpoint with vid1 done
+        cp_data = {"vid1": {"status": "ok", "result": self._make_mock_result("vid1").to_dict()}}
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        mock_result2 = self._make_mock_result("vid2")
+
+        batch_call_count = 0
+        original_batch = YouTubeScraper.batch_scrape
+
+        def patched_batch(self_inner, urls, **kwargs):
+            nonlocal batch_call_count
+            batch_call_count += 1
+            if batch_call_count == 1:
+                raise RuntimeError("Batch crashed!")
+            return original_batch(self_inner, urls, **kwargs)
+
+        with patch.object(YouTubeScraper, "batch_scrape", patched_batch):
+            with patch.object(YouTubeScraper, "get_video", return_value=mock_result2):
+                with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                    with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                        batch = scraper.batch_scrape_resilient(
+                            ["vid1", "vid2"], checkpoint=checkpoint_path, max_retries=3, retry_delay=0
+                        )
+
+        assert batch.total == 2
+        assert batch.succeeded == 2  # vid1 from checkpoint + vid2 scraped
+        assert batch.failed == 0
+
+    def test_resilient_keyboard_interrupt(self, tmp_path):
+        """Resilient batch handles KeyboardInterrupt and retries."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        # Pre-create checkpoint with vid1 done
+        cp_data = {"vid1": {"status": "ok", "result": self._make_mock_result("vid1").to_dict()}}
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        mock_result2 = self._make_mock_result("vid2")
+
+        batch_call_count = 0
+        original_batch = YouTubeScraper.batch_scrape
+
+        def patched_batch(self_inner, urls, **kwargs):
+            nonlocal batch_call_count
+            batch_call_count += 1
+            if batch_call_count == 1:
+                raise KeyboardInterrupt("Ctrl+C!")
+            return original_batch(self_inner, urls, **kwargs)
+
+        with patch.object(YouTubeScraper, "batch_scrape", patched_batch):
+            with patch.object(YouTubeScraper, "get_video", return_value=mock_result2):
+                with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                    with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                        batch = scraper.batch_scrape_resilient(
+                            ["vid1", "vid2"], checkpoint=checkpoint_path, max_retries=3, retry_delay=0
+                        )
+
+        assert batch.total == 2
+        assert batch.succeeded == 2
+
+    def test_resilient_max_retries_exhausted(self, tmp_path):
+        """Resilient batch stops after max_retries and returns checkpoint data."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        # Pre-create checkpoint with vid1 done
+        cp_data = {"vid1": {"status": "ok", "result": self._make_mock_result("vid1").to_dict()}}
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        # Always crash
+        with patch.object(YouTubeScraper, "batch_scrape", side_effect=RuntimeError("Always crash")):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape_resilient(
+                        ["vid1", "vid2"], checkpoint=checkpoint_path, max_retries=2, retry_delay=0
+                    )
+
+        # Should still return vid1 from checkpoint
+        assert batch.total == 2
+        assert batch.succeeded == 1  # vid1 from checkpoint
+        assert len(batch.results) == 1
+
+    def test_resilient_all_succeed_no_retry(self, tmp_path):
+        """Resilient batch doesn't retry when everything succeeds first time."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        mock_result = self._make_mock_result("vid1")
+
+        batch_call_count = 0
+        original_batch = YouTubeScraper.batch_scrape
+
+        def patched_batch(self_inner, urls, **kwargs):
+            nonlocal batch_call_count
+            batch_call_count += 1
+            return original_batch(self_inner, urls, **kwargs)
+
+        with patch.object(YouTubeScraper, "batch_scrape", patched_batch):
+            with patch.object(YouTubeScraper, "get_video", return_value=mock_result):
+                with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                    with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                        batch = scraper.batch_scrape_resilient(
+                            ["vid1"], checkpoint=checkpoint_path, max_retries=3, retry_delay=0
+                        )
+
+        # Should only call batch_scrape once (no retry needed)
+        assert batch_call_count == 1
+        assert batch.succeeded == 1
+
+
+# ---------------------------------------------------------------------------
+# retry_failed parameter
+# ---------------------------------------------------------------------------
+
+class TestRetryFailed:
+    def _make_mock_result(self, video_id: str) -> VideoResult:
+        return VideoResult(
+            video_id=video_id,
+            source_url=f"https://www.youtube.com/watch?v={video_id}",
+            metadata=VideoMetadata(video_url=f"https://www.youtube.com/watch?v={video_id}", title=f"Test {video_id}"),
+            engagement=Engagement(comment_count_scraped=0),
+            transcript=Transcript(available=False),
+            summary=Summary(available=False, text=""),
+            comments=[],
+            network=NetworkInfo(access_status=AccessStatus(blocked=False)),
+        )
+
+    def test_retry_failed_retries_errors(self, tmp_path):
+        """retry_failed=True retries previously-failed videos."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        # Pre-create checkpoint: vid1 ok, vid2 error
+        cp_data = {
+            "vid1": {"status": "ok", "result": self._make_mock_result("vid1").to_dict()},
+            "vid2": {"status": "error", "error_type": "RuntimeError", "error_message": "crashed"},
+        }
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        scraped_urls = []
+        def fake_get_video(url_or_id):
+            scraped_urls.append(url_or_id)
+            return self._make_mock_result(url_or_id)
+
+        with patch.object(YouTubeScraper, "get_video", side_effect=fake_get_video):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(
+                        ["vid1", "vid2"],
+                        checkpoint=checkpoint_path,
+                        retry_failed=True,
+                    )
+
+        # vid1 should be skipped (ok), vid2 should be retried
+        assert scraped_urls == ["vid2"]
+        assert batch.succeeded == 2  # vid1 from checkpoint + vid2 scraped
+
+    def test_retry_false_skips_all(self, tmp_path):
+        """retry_failed=False (default) skips all checkpointed videos."""
+        checkpoint_path = str(tmp_path / "cp.json")
+        cp_data = {
+            "vid1": {"status": "ok", "result": self._make_mock_result("vid1").to_dict()},
+            "vid2": {"status": "error", "error_type": "RuntimeError", "error_message": "crashed"},
+        }
+        with open(checkpoint_path, "w") as f:
+            json.dump(cp_data, f)
+
+        config = ScraperConfig(max_workers=2, batch_delay=0)
+        scraper = YouTubeScraper(config)
+
+        scraped_urls = []
+        def fake_get_video(url_or_id):
+            scraped_urls.append(url_or_id)
+            return self._make_mock_result(url_or_id)
+
+        with patch.object(YouTubeScraper, "get_video", side_effect=fake_get_video):
+            with patch.object(YouTubeScraper, "__enter__", return_value=scraper):
+                with patch.object(YouTubeScraper, "__exit__", return_value=None):
+                    batch = scraper.batch_scrape(
+                        ["vid1", "vid2"],
+                        checkpoint=checkpoint_path,
+                        retry_failed=False,
+                    )
+
+        # Both should be skipped
+        assert scraped_urls == []
+        assert batch.succeeded == 1  # only vid1 (ok)

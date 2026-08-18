@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-18
+
+### Added
+- **Automatic crash recovery** with `batch_scrape_resilient()`
+- Supervisor catches crashes (exceptions, KeyboardInterrupt, browser failures)
+- Auto-retries from checkpoint — no manual intervention needed
+- Previously failed videos are retried on each attempt
+- `max_retries` and `retry_delay` parameters control retry behavior
+- `retry_failed` parameter on `batch_scrape()` for selective retry
+- CLI `--auto-resume`, `--max-retries`, `--retry-delay` flags
+- 8 new tests for resilient scraping (179 total)
+
+### Example
+```python
+# Crashes 3 times? Auto-resumes and returns complete result
+batch = scraper.batch_scrape_resilient(
+    urls, checkpoint="progress.json", max_retries=5, retry_delay=10.0
+)
+```
+
 ## [1.3.0] - 2026-08-18
 
 ### Added

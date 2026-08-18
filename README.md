@@ -206,6 +206,47 @@ yt-network-scraper batch --file urls.txt --workers 4 --checkpoint progress.json 
 
 The checkpoint file is a JSON file that records each video's status (`ok` or `error`) and result data. It's written atomically after each video completes, so progress is never lost.
 
+### Auto-Resume (Automatic Crash Recovery)
+
+For production workloads, use `batch_scrape_resilient` to automatically recover from any crash — browser failures, network errors, even Ctrl+C. The supervisor catches the crash, waits, and retries from the checkpoint. Previously failed videos are retried. The user never sees an unhandled error:
+
+```python
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape_resilient(
+        urls,
+        checkpoint="progress.json",
+        max_retries=5,       # retry up to 5 times
+        retry_delay=10.0,    # wait 10s between retries
+    )
+    # Even if the process crashes 3 times, it auto-resumes
+    # and returns the complete result.
+    print(f"Done: {batch.succeeded} ok, {batch.failed} failed")
+```
+
+**How it works:**
+
+```
+Attempt 1: Scrape 100 videos → videos 1-50 succeed → CRASH at #51
+    ↓ (auto-caught, wait 10s)
+Attempt 2: Skip 1-50 (checkpoint) → retry #51-100 → #51-80 succeed → CRASH at #81
+    ↓ (auto-caught, wait 10s)
+Attempt 3: Skip 1-80 → retry #81-100 → all succeed → DONE
+    ↓
+Return BatchResult (100 succeeded, 0 failed)
+```
+
+**CLI with auto-resume:**
+
+```bash
+# Automatically retries on any crash — no manual intervention needed
+yt-network-scraper batch --file urls.txt --workers 4 \
+    --checkpoint progress.json \
+    --auto-resume \
+    --max-retries 5 \
+    --retry-delay 10 \
+    --out batch.json
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

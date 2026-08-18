@@ -267,6 +267,7 @@ class YouTubeScraper:
         batch_delay: float | None = None,
         progress_callback: Any = None,
         checkpoint: str | None = None,
+        retry_failed: bool = False,
     ) -> BatchResult:
         """Scrape multiple YouTube videos concurrently.
 
@@ -283,6 +284,9 @@ class YouTubeScraper:
             checkpoint: Optional path to a JSON file for crash-resumable batching.
                 Completed results are saved incrementally. If the file already
                 exists, already-completed videos are skipped on re-run.
+            retry_failed: If True, videos that previously failed (status "error"
+                in checkpoint) are retried. Only "ok" videos are skipped.
+                Default False — all checkpointed videos are skipped.
 
         Returns:
             A :class:`BatchResult` with successful results and errors.
@@ -316,7 +320,14 @@ class YouTubeScraper:
                     checkpoint_data = {}
 
         # Separate already-completed from pending
-        completed_urls: set[str] = set(checkpoint_data.keys())
+        if retry_failed:
+            # Only skip videos that succeeded; retry failed ones
+            completed_urls = {
+                url for url, entry in checkpoint_data.items()
+                if entry.get("status") == "ok"
+            }
+        else:
+            completed_urls = set(checkpoint_data.keys())
         pending_urls = [u for u in urls_or_ids if u not in completed_urls]
         skipped = len(urls_or_ids) - len(pending_urls)
 
@@ -409,6 +420,154 @@ class YouTubeScraper:
             errors=errors,
             elapsed_seconds=round(elapsed, 2),
         )
+
+    def batch_scrape_resilient(
+        self,
+        urls_or_ids: list[str],
+        max_workers: int | None = None,
+        batch_delay: float | None = None,
+        progress_callback: Any = None,
+        checkpoint: str | None = None,
+        max_retries: int = 3,
+        retry_delay: float = 5.0,
+    ) -> BatchResult:
+        """Scrape multiple videos with automatic crash recovery.
+
+        Wraps :meth:`batch_scrape` with a supervisor that automatically
+        retries on any crash (exception, KeyboardInterrupt, browser failure).
+        Each retry resumes from the checkpoint — only pending and previously
+        failed videos are re-scraped. The user never sees an unhandled error;
+        the method keeps retrying until all videos succeed or ``max_retries``
+        is exhausted.
+
+        Requires a ``checkpoint`` path — without it, there is nothing to
+        resume from.
+
+        Args:
+            urls_or_ids: List of YouTube URLs or video IDs.
+            max_workers: Concurrent browser instances (default: config.max_workers).
+            batch_delay: Delay between starting each task (default: config.batch_delay).
+            progress_callback: Optional ``(index, total, video_id, status)`` callback.
+            checkpoint: Path to checkpoint JSON file (required for resume).
+            max_retries: Max retry attempts after a crash (default: 3).
+            retry_delay: Seconds to wait before retrying (default: 5.0).
+
+        Returns:
+            A :class:`BatchResult` with all results accumulated across retries.
+
+        Raises:
+            ValueError: If ``checkpoint`` is not provided.
+
+        Example::
+
+            with YouTubeScraper(ScraperConfig(max_workers=4)) as scraper:
+                batch = scraper.batch_scrape_resilient(
+                    urls,
+                    checkpoint="progress.json",
+                    max_retries=5,
+                    retry_delay=10.0,
+                )
+                # Even if the process crashes 3 times, it auto-resumes
+                # and returns the complete result.
+                print(f"Done: {batch.succeeded} ok, {batch.failed} failed")
+        """
+        if not checkpoint:
+            raise ValueError("batch_scrape_resilient requires a checkpoint path")
+
+        all_results: list[VideoResult] = []
+        all_errors: list[BatchError] = []
+        total = len(urls_or_ids)
+        start_time = time.time()
+        attempt = 0
+
+        while attempt <= max_retries:
+            attempt += 1
+            try:
+                logging.info("Resilient batch attempt %d/%d", attempt, max_retries + 1)
+                if attempt > 1:
+                    logging.info("Retrying failed videos from checkpoint...")
+                    if retry_delay > 0:
+                        time.sleep(retry_delay)
+
+                batch = self.batch_scrape(
+                    urls_or_ids,
+                    max_workers=max_workers,
+                    batch_delay=batch_delay,
+                    progress_callback=progress_callback,
+                    checkpoint=checkpoint,
+                    retry_failed=(attempt > 1),  # Retry failed videos on re-attempts
+                )
+
+                # Merge results
+                all_results = batch.results
+                all_errors = batch.errors
+
+                # If everything succeeded, we're done
+                if batch.failed == 0:
+                    break
+
+                # If no progress was made this attempt, stop to avoid infinite loop
+                if attempt > 1 and batch.succeeded == len(all_results):
+                    logging.warning("No progress on attempt %d, stopping", attempt)
+                    break
+
+            except KeyboardInterrupt:
+                logging.warning("Interrupted on attempt %d, saving checkpoint and retrying...", attempt)
+                if attempt > max_retries:
+                    break
+                if retry_delay > 0:
+                    time.sleep(retry_delay)
+                continue
+
+            except Exception as exc:  # noqa: BLE001
+                logging.warning("Crash on attempt %d: %s", attempt, exc)
+                if attempt > max_retries:
+                    # Load whatever we have from checkpoint
+                    all_results, all_errors = self._load_checkpoint_results(checkpoint, urls_or_ids)
+                    break
+                if retry_delay > 0:
+                    time.sleep(retry_delay)
+                continue
+
+        elapsed = time.time() - start_time
+        return BatchResult(
+            total=total,
+            succeeded=len(all_results),
+            failed=len(all_errors),
+            results=all_results,
+            errors=all_errors,
+            elapsed_seconds=round(elapsed, 2),
+        )
+
+    @staticmethod
+    def _load_checkpoint_results(
+        checkpoint: str,
+        urls_or_ids: list[str],
+    ) -> tuple[list[VideoResult], list[BatchError]]:
+        """Load results and errors from a checkpoint file."""
+        results: list[VideoResult] = []
+        errors: list[BatchError] = []
+        cp_path = Path(checkpoint)
+        if not cp_path.exists():
+            return results, errors
+        try:
+            checkpoint_data = json.loads(cp_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return results, errors
+
+        for url_or_id in urls_or_ids:
+            entry = checkpoint_data.get(url_or_id)
+            if not entry:
+                continue
+            if entry.get("status") == "ok" and "result" in entry:
+                results.append(YouTubeScraper._deserialize_result(entry["result"]))
+            elif entry.get("status") == "error":
+                errors.append(BatchError(
+                    url_or_id=url_or_id,
+                    error_type=entry.get("error_type", "Unknown"),
+                    error_message=entry.get("error_message", ""),
+                ))
+        return results, errors
 
     @staticmethod
     def _deserialize_result(data: dict) -> VideoResult:

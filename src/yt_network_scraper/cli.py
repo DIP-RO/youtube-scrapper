@@ -77,6 +77,23 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to checkpoint JSON file for crash-resumable batching. Completed videos are saved incrementally and skipped on re-run.",
     )
+    batch_parser.add_argument(
+        "--auto-resume",
+        action="store_true",
+        help="Enable automatic crash recovery. On any crash, the batch retries from the checkpoint (up to --max-retries times).",
+    )
+    batch_parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        help="Max retry attempts when --auto-resume is enabled (default: 3).",
+    )
+    batch_parser.add_argument(
+        "--retry-delay",
+        type=float,
+        default=5.0,
+        help="Seconds to wait before retrying after a crash (default: 5.0).",
+    )
 
     return parser
 
@@ -155,10 +172,26 @@ def _run_batch_command(args: argparse.Namespace) -> int:
     if args.checkpoint:
         print(f"Checkpoint: {args.checkpoint}", file=sys.stderr)
 
+    if args.auto_resume and not args.checkpoint:
+        print("Error: --auto-resume requires --checkpoint", file=sys.stderr)
+        return 1
+
     print(f"Scraping {len(urls)} videos with {config.max_workers} workers...", file=sys.stderr)
 
+    if args.auto_resume:
+        print(f"Auto-resume enabled: max {args.max_retries} retries, {args.retry_delay}s delay", file=sys.stderr)
+
     with YouTubeScraper(config) as scraper:
-        batch = scraper.batch_scrape(urls, progress_callback=progress, checkpoint=args.checkpoint)
+        if args.auto_resume:
+            batch = scraper.batch_scrape_resilient(
+                urls,
+                progress_callback=progress,
+                checkpoint=args.checkpoint,
+                max_retries=max(0, args.max_retries),
+                retry_delay=max(0.0, args.retry_delay),
+            )
+        else:
+            batch = scraper.batch_scrape(urls, progress_callback=progress, checkpoint=args.checkpoint)
 
     print(f"\nDone: {batch.succeeded} succeeded, {batch.failed} failed, {batch.elapsed_seconds}s", file=sys.stderr)
 
