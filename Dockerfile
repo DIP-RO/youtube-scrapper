@@ -3,7 +3,7 @@ FROM python:3.12-slim
 LABEL maintainer="Dipro Paul <dipropaul032@gmail.com>"
 LABEL org.opencontainers.image.title="yt-network-scraper"
 LABEL org.opencontainers.image.description="Network-first YouTube video scraper"
-LABEL org.opencontainers.image.source="https://github.com/DIP-RO/youtube-scrapper"
+LABEL org.opencontainers.image.source="https://pypi.org/project/yt-network-scraper/"
 LABEL org.opencontainers.image.license="MIT"
 
 # Install Chromium and dependencies (works on amd64 and arm64)

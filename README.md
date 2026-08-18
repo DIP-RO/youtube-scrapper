@@ -409,10 +409,6 @@ The scraper is designed to be **defensive** — YouTube frequently changes inter
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/DIP-RO/yt-network-scraper.git
-cd yt-network-scraper
-
 # Create a virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate

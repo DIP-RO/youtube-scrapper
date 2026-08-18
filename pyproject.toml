@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-network-scraper"
-version = "1.1.1"
+version = "1.1.2"
 description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
 readme = "README.md"
 license = "MIT"
@@ -52,10 +52,8 @@ dev = [
 yt-network-scraper = "yt_network_scraper.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/DIP-RO/youtube-scrapper"
-Repository = "https://github.com/DIP-RO/youtube-scrapper"
-Issues = "https://github.com/DIP-RO/youtube-scrapper/issues"
-Changelog = "https://github.com/DIP-RO/youtube-scrapper/blob/main/CHANGELOG.md"
+Homepage = "https://pypi.org/project/yt-network-scraper/"
+Changelog = "https://pypi.org/project/yt-network-scraper/#history"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/yt_network_scraper"]
