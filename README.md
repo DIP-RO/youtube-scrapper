@@ -451,7 +451,9 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ## Attribution
 
-Developed and maintained by Dipro Paul.
+Developed and maintained by **Dipro Paul**.
+
+Follow me on GitHub for latest updates: [github.com/DIP-RO](https://github.com/DIP-RO)
 
 ## Disclaimer
 
