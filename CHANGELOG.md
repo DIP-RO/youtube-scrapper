@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-08-18
+
+### Added — Major release: Video Player, Pipeline, Performance
+
+- **Video Player** (MX Player-style)
+  - `VideoPlayer` class with play, pause, resume, stop, seek, volume
+  - `Playlist` and `Track` models with loop (none/one/all) and shuffle
+  - `save_playlist()` / `load_playlist()` for JSON playlist persistence
+  - `create_playlist_from_directory()` — auto-create playlist from media files
+  - Subtitle support (SRT files auto-detected)
+  - Multiple backends: ffplay, VLC, mpv, system default
+  - Dry-run mode for headless/CI validation
+  - CLI `player` subcommand
+- **Pipeline orchestration**
+  - `ScrapePipeline` chains stages: scrape → filter → sentiment → export → download → download_video
+  - Each stage is optional and configurable
+  - `PipelineResult` with per-stage results, output files, sentiments
+  - CLI `pipeline` subcommand with `--stages` flag
+- **Performance optimizations for high load**
+  - `LRUCache` — thread-safe O(1) get/put with eviction
+  - `RateLimiter` — token bucket algorithm, thread-safe
+  - `BackoffStrategy` — exponential backoff with jitter
+  - `retry_with_backoff()` — retry helper with configurable strategy
+  - `chunk_list()` — memory-efficient batch chunking
+  - Global caches for metadata and stream URLs
+- 154 new tests (467 total)
+- Comprehensive integration test covering all package features
+
+### Fixed
+- Indentation error in `player.py` `unshuffle()` method
+
 ## [2.2.0] - 2026-08-18
 
 ### Added — Video File Download

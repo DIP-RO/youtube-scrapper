@@ -551,6 +551,159 @@ Install ffmpeg:
 - Ubuntu: `sudo apt install ffmpeg`
 - Windows: Download from https://ffmpeg.org/download.html
 
+### Video Player (MX Player-style)
+
+Play downloaded videos with playlist support, shuffle, loop, and subtitle loading. Uses ffplay (ffmpeg), VLC, mpv, or the system default player:
+
+```python
+from yt_network_scraper import VideoPlayer, Playlist, Track, create_playlist_from_directory
+
+# Play a single file
+player = VideoPlayer(volume=80)
+player.play_file("video.mp4")
+player.wait()
+
+# Create and play a playlist
+playlist = Playlist(name="My Mix")
+playlist.add_track(Track(path="video1.mp4", title="Video 1"))
+playlist.add_track(Track(path="video2.mp4", title="Video 2"))
+playlist.loop_mode = "all"  # "none", "one", or "all"
+playlist.shuffle()
+
+player = VideoPlayer()
+player.play_playlist(playlist)
+player.play_all()  # Play through entire playlist
+
+# Controls
+player.pause()
+player.resume()
+player.stop()
+player.play_next()
+player.play_previous()
+player.set_volume(50)
+
+# Create playlist from a directory of video files
+playlist = create_playlist_from_directory("./downloads")
+
+# Save/load playlists
+from yt_network_scraper import save_playlist, load_playlist
+save_playlist(playlist, "my_playlist.json")
+loaded = load_playlist("my_playlist.json")
+
+# Dry-run mode (validate files without launching player)
+player = VideoPlayer(dry_run=True)
+player.play_playlist(playlist)
+```
+
+**CLI:**
+
+```bash
+# Play a single video
+yt-network-scraper player video.mp4
+
+# Play all videos in a directory
+yt-network-scraper player ./downloads --shuffle --loop all
+
+# Play a saved playlist
+yt-network-scraper player playlist.json --volume 80
+
+# Dry-run (validate without playing)
+yt-network-scraper player ./downloads --dry-run
+```
+
+### Pipeline (End-to-End Research Workflow)
+
+The pipeline chains all stages together: scrape → filter → sentiment → export → download. One command does everything:
+
+```python
+from yt_network_scraper import ScrapePipeline, ScraperConfig, CommentFilter
+
+pipeline = ScrapePipeline(
+    config=ScraperConfig(max_workers=4),
+    stages=["scrape", "filter", "sentiment", "export", "download"],
+    export_format="csv",
+    output_dir="./output",
+    download_dir="./downloads",
+    comment_filter=CommentFilter(min_likes=5),
+    checkpoint="progress.json",
+    auto_resume=True,
+)
+
+result = pipeline.run(["URL1", "URL2", "URL3"])
+print(f"Processed {result.succeeded}/{result.total} videos")
+print(f"Output files: {len(result.output_files)}")
+for stage in result.stage_results:
+    print(f"  {stage.name}: {stage.succeeded} ok, {stage.failed} failed")
+```
+
+**CLI:**
+
+```bash
+# Full pipeline: scrape + sentiment + export to CSV
+yt-network-scraper pipeline "URL1" "URL2" "URL3" \
+  --stages scrape,sentiment,export \
+  --format csv \
+  --output-dir ./output
+
+# Full pipeline with download and crash recovery
+yt-network-scraper pipeline --file urls.txt \
+  --workers 4 \
+  --stages scrape,sentiment,export,download,download_video \
+  --format json \
+  --output-dir ./output \
+  --download-dir ./downloads \
+  --video-quality 720p \
+  --checkpoint progress.json \
+  --auto-resume
+```
+
+**Available pipeline stages:**
+
+| Stage | Description |
+|-------|-------------|
+| `scrape` | Scrape metadata, comments, transcript |
+| `filter` | Filter comments by keyword/author/likes/sentiment |
+| `sentiment` | Analyze comment sentiment |
+| `export` | Export to JSON/CSV/JSONL/XLSX |
+| `download` | Download data files (metadata, comments, transcript) |
+| `download_video` | Download actual video files |
+
+### Performance Optimizations (High Load)
+
+For high-volume batch jobs (1000+ videos), the package includes performance utilities:
+
+```python
+from yt_network_scraper import LRUCache, RateLimiter, BackoffStrategy, retry_with_backoff, chunk_list
+
+# LRU cache — O(1) get/put, thread-safe
+cache = LRUCache(maxsize=1000)
+cache.put("video_id", metadata)
+metadata = cache.get("video_id")  # None if not cached
+value = cache.get_or_compute("key", lambda: expensive_compute())
+
+# Rate limiter — token bucket, thread-safe
+limiter = RateLimiter(rate=2.0)  # 2 operations per second
+limiter.acquire()  # Blocks until allowed
+if limiter.try_acquire():  # Non-blocking
+    do_work()
+
+# Exponential backoff with jitter
+strat = BackoffStrategy(initial_delay=1.0, max_delay=60.0, multiplier=2.0)
+delay = strat.delay(attempt=3)  # 8.0s
+
+# Retry with backoff
+result = retry_with_backoff(
+    fetch_data,
+    max_retries=5,
+    strategy=BackoffStrategy(initial_delay=2.0),
+)
+
+# Chunk large lists for memory-efficient processing
+chunks = chunk_list(list(range(10000)), chunk_size=100)
+for chunk in chunks:
+    process(chunk)
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

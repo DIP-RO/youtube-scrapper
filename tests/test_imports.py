@@ -34,12 +34,22 @@ from yt_network_scraper import (
     download_video_file,
     extract_streams,
     has_ffmpeg,
+    VideoPlayer,
+    Playlist,
+    Track,
+    ScrapePipeline,
+    PipelineResult,
+    LRUCache,
+    RateLimiter,
+    BackoffStrategy,
+    retry_with_backoff,
+    chunk_list,
 )
 
 
 def test_version():
     assert hasattr(yt_network_scraper, "__version__")
-    assert yt_network_scraper.__version__ == "1.0.0"
+    assert yt_network_scraper.__version__ == "3.1.0"
 
 
 def test_all_exports():
@@ -104,6 +114,29 @@ def test_all_exports():
         "filter_comments",
         "search_comments",
         "top_comments",
+        # Player
+        "VideoPlayer",
+        "Playlist",
+        "Track",
+        "save_playlist",
+        "load_playlist",
+        "create_playlist_from_directory",
+        "find_player_backend",
+        "has_ffplay",
+        # Pipeline
+        "ScrapePipeline",
+        "PipelineResult",
+        "PipelineStageResult",
+        "VALID_STAGES",
+        # Performance
+        "LRUCache",
+        "RateLimiter",
+        "BackoffStrategy",
+        "retry_with_backoff",
+        "chunk_list",
+        "get_metadata_cache",
+        "get_stream_cache",
+        "clear_all_caches",
     }
     assert set(yt_network_scraper.__all__) == expected
 
@@ -123,3 +156,19 @@ def test_config_is_dataclass():
     config = ScraperConfig()
     assert config.headless is True
     assert config.timeout == 25
+
+
+def test_player_is_class():
+    assert isinstance(VideoPlayer, type)
+
+
+def test_pipeline_is_class():
+    assert isinstance(ScrapePipeline, type)
+
+
+def test_lru_cache_is_class():
+    assert isinstance(LRUCache, type)
+
+
+def test_rate_limiter_is_class():
+    assert isinstance(RateLimiter, type)

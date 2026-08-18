@@ -133,6 +133,44 @@ def build_parser() -> argparse.ArgumentParser:
     download_parser.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping")
     download_parser.add_argument("--list-formats", action="store_true", help="List available formats without downloading")
 
+    # --- player subcommand ---
+    player_parser = subparsers.add_parser(
+        "player",
+        help="Play downloaded video files with playlist support",
+        description="Play video files using an external player (ffplay/vlc/system). Supports playlists, shuffle, loop, and subtitles.",
+    )
+    player_parser.add_argument("path", help="Video file path or playlist JSON file or directory")
+    player_parser.add_argument("--volume", type=int, default=100, help="Volume 0-100 (default: 100)")
+    player_parser.add_argument("--loop", choices=["none", "one", "all"], default="none", help="Loop mode (default: none)")
+    player_parser.add_argument("--shuffle", action="store_true", help="Shuffle playlist")
+    player_parser.add_argument("--dry-run", action="store_true", help="Validate files without launching player")
+    player_parser.add_argument("--backend", default=None, help="Player backend: ffplay, vlc, mpv, system")
+
+    # --- pipeline subcommand ---
+    pipeline_parser = subparsers.add_parser(
+        "pipeline",
+        help="Run end-to-end pipeline: scrape → filter → sentiment → export → download",
+        description="Run a complete research pipeline. Scrapes videos, analyzes sentiment, exports data, and optionally downloads video files.",
+    )
+    pipeline_parser.add_argument("urls", nargs="*", help="YouTube URLs or video IDs")
+    pipeline_parser.add_argument("--file", type=Path, help="File containing one URL/ID per line")
+    pipeline_parser.add_argument("--workers", type=int, default=3, help="Max concurrent browser instances (default: 3)")
+    pipeline_parser.add_argument("--comments", type=int, default=25, help="Max comments per video (default: 25)")
+    pipeline_parser.add_argument(
+        "--stages",
+        default="scrape,sentiment,export",
+        help="Pipeline stages (comma-separated): scrape,filter,sentiment,export,download,download_video (default: scrape,sentiment,export)",
+    )
+    pipeline_parser.add_argument("--format", choices=["json", "csv", "jsonl", "xlsx"], default="json", help="Export format (default: json)")
+    pipeline_parser.add_argument("--output-dir", type=Path, default=Path("./output"), help="Directory for exported files (default: ./output)")
+    pipeline_parser.add_argument("--download-dir", type=Path, help="Directory for downloaded files")
+    pipeline_parser.add_argument("--video-quality", default="best", help="Video download quality: best, 720p, 1080p, audio (default: best)")
+    pipeline_parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint JSON file for crash recovery")
+    pipeline_parser.add_argument("--auto-resume", action="store_true", help="Auto-retry on crash (requires --checkpoint)")
+    pipeline_parser.add_argument("--max-retries", type=int, default=3, help="Max retry attempts (default: 3)")
+    pipeline_parser.add_argument("--timeout", type=int, default=25, help="Browser timeout (default: 25)")
+    pipeline_parser.add_argument("--no-headless", action="store_true", help="Show Chrome")
+
     return parser
 
 
@@ -150,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
         return _run_playlist_command(args)
     if args.command == "download":
         return _run_download_command(args)
+    if args.command == "player":
+        return _run_player_command(args)
+    if args.command == "pipeline":
+        return _run_pipeline_command(args)
     return 1
 
 
@@ -389,6 +431,153 @@ def _run_download_command(args: argparse.Namespace) -> int:
     else:
         print(f"Download failed: {result.error}", file=sys.stderr)
         return 1
+
+
+def _run_player_command(args: argparse.Namespace) -> int:
+    """Execute the ``player`` subcommand."""
+    from .player import (
+        Playlist,
+        Track,
+        VideoPlayer,
+        create_playlist_from_directory,
+        load_playlist,
+    )
+
+    path = Path(args.path)
+
+    # Determine what we're playing
+    if path.is_file() and path.suffix == ".json":
+        # Playlist JSON file
+        try:
+            playlist = load_playlist(path)
+        except Exception as exc:
+            print(f"Error loading playlist: {exc}", file=sys.stderr)
+            return 1
+    elif path.is_dir():
+        # Directory — create playlist from media files
+        playlist = create_playlist_from_directory(path, name=path.name)
+        if playlist.is_empty:
+            print(f"No media files found in {path}", file=sys.stderr)
+            return 1
+    elif path.is_file():
+        # Single video file
+        playlist = Playlist(name=path.name)
+        playlist.add_track(Track(path=str(path), title=path.stem))
+    else:
+        print(f"Path not found: {path}", file=sys.stderr)
+        return 1
+
+    # Apply loop and shuffle settings
+    playlist.loop_mode = args.loop
+    if args.shuffle:
+        playlist.shuffle()
+
+    print(f"Playlist: {playlist.name} ({playlist.size} tracks)", file=sys.stderr)
+    for i, track in enumerate(playlist.tracks):
+        marker = "▶" if i == playlist.current_index else " "
+        print(f"  {marker} {i+1}. {track.title or track.filename}", file=sys.stderr)
+
+    player = VideoPlayer(
+        backend=args.backend,
+        volume=args.volume,
+        dry_run=args.dry_run,
+    )
+
+    if args.dry_run:
+        print("[dry-run] Would play playlist", file=sys.stderr)
+    else:
+        print(f"Starting playback (backend: {player.backend})...", file=sys.stderr)
+
+    if not player.play_playlist(playlist):
+        print("Failed to start playback", file=sys.stderr)
+        return 1
+
+    if not args.dry_run:
+        print("Playing... Press Ctrl+C to stop.", file=sys.stderr)
+        try:
+            count = player.play_all()
+            print(f"\nPlayed {count} tracks", file=sys.stderr)
+        except KeyboardInterrupt:
+            print("\nStopping...", file=sys.stderr)
+            player.stop()
+    return 0
+
+
+def _run_pipeline_command(args: argparse.Namespace) -> int:
+    """Execute the ``pipeline`` subcommand."""
+    from .pipeline import ScrapePipeline
+
+    # Collect URLs
+    urls: list[str] = list(args.urls) if args.urls else []
+    if args.file:
+        file_urls = [
+            line.strip()
+            for line in args.file.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        urls.extend(file_urls)
+
+    if not urls:
+        print("Error: no URLs provided. Pass URLs as arguments or use --file.", file=sys.stderr)
+        return 1
+
+    stages = [s.strip() for s in args.stages.split(",") if s.strip()]
+
+    config = ScraperConfig(
+        headless=not args.no_headless,
+        timeout=args.timeout,
+        max_comments=max(0, args.comments),
+        max_workers=max(1, args.workers),
+    )
+
+    pipeline = ScrapePipeline(
+        config=config,
+        stages=stages,
+        export_format=args.format,
+        download_dir=str(args.download_dir) if args.download_dir else None,
+        output_dir=str(args.output_dir),
+        video_quality=args.video_quality,
+        checkpoint=args.checkpoint,
+        auto_resume=args.auto_resume,
+        max_retries=args.max_retries,
+    )
+
+    print(f"Pipeline stages: {stages}", file=sys.stderr)
+    print(f"Processing {len(urls)} videos...", file=sys.stderr)
+
+    result = pipeline.run(urls)
+
+    print(f"\n{'='*50}", file=sys.stderr)
+    print(f"Pipeline Complete", file=sys.stderr)
+    print(f"  Total: {result.total}", file=sys.stderr)
+    print(f"  Succeeded: {result.succeeded}", file=sys.stderr)
+    print(f"  Failed: {result.failed}", file=sys.stderr)
+    print(f"  Time: {result.elapsed_seconds:.1f}s", file=sys.stderr)
+    print(f"{'='*50}", file=sys.stderr)
+
+    for stage in result.stage_results:
+        status = "OK" if stage.error is None else f"ERROR: {stage.error}"
+        print(f"  {stage.name:15s}  {stage.succeeded} ok, {stage.failed} failed  [{status}]  {stage.elapsed_seconds:.1f}s", file=sys.stderr)
+
+    if result.output_files:
+        print(f"\nOutput files ({len(result.output_files)}):", file=sys.stderr)
+        for f in result.output_files[:10]:
+            print(f"  {f}", file=sys.stderr)
+        if len(result.output_files) > 10:
+            print(f"  ... and {len(result.output_files) - 10} more", file=sys.stderr)
+
+    if result.sentiments:
+        print(f"\nSentiment summary:", file=sys.stderr)
+        for s in result.sentiments[:5]:
+            print(f"  {s.video_id}: {s.overall_label} ({s.positive_count}+, {s.negative_count}-, {s.neutral_count} neutral)", file=sys.stderr)
+
+    # Write pipeline result JSON
+    result_path = args.output_dir / "pipeline_result.json"
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    result_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"\nPipeline result: {result_path}", file=sys.stderr)
+
+    return 0 if result.failed == 0 else 1
 
 
 if __name__ == "__main__":

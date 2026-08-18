@@ -1,4 +1,4 @@
-"""yt-network-scraper — A network-first YouTube video scraper.
+"""yt-network-scraper — A network-first YouTube video scraper and downloader.
 
 Public API::
 
@@ -26,6 +26,26 @@ Public API::
     # Comment filtering
     from yt_network_scraper import filter_comments, CommentFilter
     filtered = filter_comments(result, keyword="great", min_likes=10)
+
+    # Video file download
+    with YouTubeScraper() as scraper:
+        result = scraper.download_video_file("URL", "./video.mp4", quality="720p")
+
+    # Video player with playlist
+    from yt_network_scraper import VideoPlayer, Playlist, Track
+    player = VideoPlayer(dry_run=True)
+    playlist = Playlist(name="My Mix")
+    playlist.add_track(Track(path="video.mp4"))
+    player.play_playlist(playlist)
+
+    # Pipeline (scrape → filter → sentiment → export → download)
+    from yt_network_scraper import ScrapePipeline
+    pipeline = ScrapePipeline(
+        stages=["scrape", "sentiment", "export"],
+        export_format="csv",
+        output_dir="./output",
+    )
+    result = pipeline.run(["URL1", "URL2"])
 """
 
 from __future__ import annotations
@@ -83,6 +103,32 @@ from .models import (
     TranscriptSegment,
     VideoMetadata,
     VideoResult,
+)
+from .performance import (
+    BackoffStrategy,
+    LRUCache,
+    RateLimiter,
+    chunk_list,
+    clear_all_caches,
+    get_metadata_cache,
+    get_stream_cache,
+    retry_with_backoff,
+)
+from .pipeline import (
+    PipelineResult,
+    PipelineStageResult,
+    ScrapePipeline,
+    VALID_STAGES,
+)
+from .player import (
+    Playlist,
+    Track,
+    VideoPlayer,
+    create_playlist_from_directory,
+    find_player_backend,
+    has_ffplay,
+    load_playlist,
+    save_playlist,
 )
 from .sentiment import (
     CommentSentiment,
@@ -154,6 +200,29 @@ __all__ = [
     "filter_comments",
     "search_comments",
     "top_comments",
+    # Player
+    "VideoPlayer",
+    "Playlist",
+    "Track",
+    "save_playlist",
+    "load_playlist",
+    "create_playlist_from_directory",
+    "find_player_backend",
+    "has_ffplay",
+    # Pipeline
+    "ScrapePipeline",
+    "PipelineResult",
+    "PipelineStageResult",
+    "VALID_STAGES",
+    # Performance
+    "LRUCache",
+    "RateLimiter",
+    "BackoffStrategy",
+    "retry_with_backoff",
+    "chunk_list",
+    "get_metadata_cache",
+    "get_stream_cache",
+    "clear_all_caches",
 ]
 
-__version__ = "1.0.0"
+__version__ = "3.1.0"
