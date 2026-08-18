@@ -19,7 +19,7 @@ from pathlib import Path
 
 from .client import ScraperConfig, YouTubeScraper
 from .exceptions import ScraperError
-from .export import export_batch, export_video
+from .export import download_batch, download_video, export_batch, export_video
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,11 +42,17 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
         p.add_argument(
             "--format",
-            choices=["json", "csv", "jsonl", "txt"],
+            choices=["json", "csv", "jsonl", "txt", "xlsx", "srt"],
             default="json",
-            help="Output format: json, csv, jsonl, or txt (default: json)",
+            help="Output format: json, csv, jsonl, txt, xlsx, or srt (default: json)",
         )
         p.add_argument("--comments-csv", action="store_true", help="Export comments as CSV (use with --format csv)")
+        p.add_argument(
+            "--download",
+            type=Path,
+            default=None,
+            help="Download all results to this directory (creates per-video files: metadata CSV, comments CSV, transcript TXT/SRT, JSON)",
+        )
 
     # --- video subcommand ---
     video_parser = subparsers.add_parser(
@@ -159,6 +165,14 @@ def _run_video_command(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
+    # Download mode: save all files to directory
+    if args.download:
+        files = download_video(result, args.download)
+        print(f"Downloaded {len(files)} files to {args.download}/", file=sys.stderr)
+        for f in files:
+            print(f"  {f.name}", file=sys.stderr)
+        return 0
+
     if args.format == "json":
         indent = 2 if args.pretty or args.out else None
         payload = json.dumps(result.to_dict(), ensure_ascii=False, indent=indent)
@@ -257,6 +271,16 @@ def _run_batch_scrape(args: argparse.Namespace, urls: list[str]) -> int:
             batch = scraper.batch_scrape(urls, progress_callback=progress, checkpoint=args.checkpoint)
 
     print(f"\nDone: {batch.succeeded} succeeded, {batch.failed} failed, {batch.elapsed_seconds}s", file=sys.stderr)
+
+    # Download mode: save all files to directory
+    if args.download:
+        files = download_batch(batch, args.download)
+        print(f"Downloaded {len(files)} files to {args.download}/", file=sys.stderr)
+        for f in files[:10]:
+            print(f"  {f.name}", file=sys.stderr)
+        if len(files) > 10:
+            print(f"  ... and {len(files) - 10} more", file=sys.stderr)
+        return 0 if batch.failed == 0 else 1
 
     if args.format == "json":
         indent = 2 if args.pretty or args.out else None

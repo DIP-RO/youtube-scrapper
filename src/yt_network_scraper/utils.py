@@ -85,33 +85,38 @@ def detect_access_block(html: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def find_key(value: Any, key: str) -> Any:
-    """Depth-first search for the first occurrence of *key* in a nested dict/list tree."""
-    if isinstance(value, dict):
-        if key in value:
-            return value[key]
-        for child in value.values():
-            found = find_key(child, key)
-            if found is not None:
-                return found
-    elif isinstance(value, list):
-        for child in value:
-            found = find_key(child, key)
-            if found is not None:
-                return found
+    """Depth-first search for the first occurrence of *key* in a nested dict/list tree.
+
+    Uses an explicit stack (iterative) to avoid recursion depth limits.
+    """
+    stack: list[Any] = [value]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            if key in current:
+                return current[key]
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            stack.extend(current)
     return None
 
 
 def find_all_keys(value: Any, key: str) -> list[Any]:
-    """Collect **every** value associated with *key* in a nested dict/list tree."""
+    """Collect **every** value associated with *key* in a nested dict/list tree.
+
+    Uses an explicit stack (iterative) to avoid recursion depth limits on
+    deeply nested YouTube payloads.
+    """
     results: list[Any] = []
-    if isinstance(value, dict):
-        if key in value:
-            results.append(value[key])
-        for child in value.values():
-            results.extend(find_all_keys(child, key))
-    elif isinstance(value, list):
-        for child in value:
-            results.extend(find_all_keys(child, key))
+    stack: list[Any] = [value]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            if key in current:
+                results.append(current[key])
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            stack.extend(current)
     return results
 
 

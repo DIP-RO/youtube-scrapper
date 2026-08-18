@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-08-18
+
+### Added
+- **Excel (.xlsx) export** — SpreadsheetML XML format, no dependency needed
+  - `video_to_xlsx()`, `batch_to_xlsx()` functions
+  - CLI `--format xlsx` flag
+- **SRT subtitle export** — standard SRT format for video editors
+  - `transcript_to_srt()` function with proper timestamp formatting
+  - CLI `--format srt` flag
+- **Download feature** — save all files to a directory in one call
+  - `download_video()` — saves JSON, CSV, TXT, SRT per video
+  - `download_batch()` — saves aggregate + per-video files
+  - CLI `--download DIR` flag
+
+### Fixed
+- **Critical bug**: `batch_scrape_resilient` "no progress" detection was broken
+  - `batch.succeeded == len(all_results)` was always True because `all_results = batch.results`
+  - Now tracks `prev_succeeded` across attempts for proper comparison
+
+### Optimized
+- `find_key` and `find_all_keys` converted from recursive to iterative
+  - Prevents stack overflow on deeply nested YouTube payloads
+  - Uses explicit stack instead of recursion
+- 23 new tests (258 total)
+
 ## [2.0.0] - 2026-08-18
 
 ### Added — Major feature release for researchers

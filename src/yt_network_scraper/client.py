@@ -479,6 +479,7 @@ class YouTubeScraper:
         total = len(urls_or_ids)
         start_time = time.time()
         attempt = 0
+        prev_succeeded = -1
 
         while attempt <= max_retries:
             attempt += 1
@@ -507,9 +508,11 @@ class YouTubeScraper:
                     break
 
                 # If no progress was made this attempt, stop to avoid infinite loop
-                if attempt > 1 and batch.succeeded == len(all_results):
+                # BUG FIX: compare against previous attempt's succeeded count
+                if attempt > 1 and batch.succeeded == prev_succeeded:
                     logging.warning("No progress on attempt %d, stopping", attempt)
                     break
+                prev_succeeded = batch.succeeded
 
             except KeyboardInterrupt:
                 logging.warning("Interrupted on attempt %d, saving checkpoint and retrying...", attempt)

@@ -372,6 +372,100 @@ results = search_comments(result, "tutorial")
 top = top_comments(result, n=10)
 ```
 
+### Excel (.xlsx) Export
+
+Export to Excel XML SpreadsheetML format — no external dependency needed, Excel opens it natively:
+
+```python
+from yt_network_scraper import export_video, export_batch
+
+# Single video to Excel
+xlsx_data = export_video(result, format="xlsx")
+
+# Comments to Excel
+xlsx_comments = export_video(result, format="xlsx", comments=True)
+
+# Batch to Excel
+xlsx_batch = export_batch(batch, format="xlsx")
+```
+
+**CLI:**
+
+```bash
+yt-network-scraper video "URL" --format xlsx --out result.xlsx
+yt-network-scraper batch --file urls.txt --format xlsx --out batch.xlsx
+```
+
+### SRT Subtitle Export
+
+Export transcripts as SRT subtitle files for use in video editors, media players, and NLP pipelines:
+
+```python
+from yt_network_scraper import export_video
+
+srt_data = export_video(result, format="srt")
+# Output:
+# 1
+# 00:00:00,000 --> 00:00:02,000
+# Hello world
+#
+# 2
+# 00:00:02,000 --> 00:00:05,000
+# Second line
+```
+
+**CLI:**
+
+```bash
+yt-network-scraper video "URL" --format srt --out transcript.srt
+```
+
+### Download Feature (Save All Files to Directory)
+
+The download feature saves all result files to a directory in one call — perfect for building datasets:
+
+```python
+from yt_network_scraper import download_video, download_batch
+
+# Save all files for a single video
+files = download_video(result, output_dir="./output")
+# Creates:
+#   output/vid1_result.json
+#   output/vid1_metadata.csv
+#   output/vid1_comments.csv
+#   output/vid1_transcript.txt
+#   output/vid1_transcript.srt
+
+# Save all files for a batch
+files = download_batch(batch, output_dir="./dataset")
+# Creates:
+#   dataset/batch_result.json
+#   dataset/batch_summary.csv
+#   dataset/batch_all_comments.csv
+#   dataset/vid1_result.json
+#   dataset/vid1_metadata.csv
+#   dataset/vid1_comments.csv
+#   dataset/vid1_transcript.txt
+#   dataset/vid1_transcript.srt
+#   ... (per video)
+
+# Choose specific formats
+files = download_video(result, "./output", formats=["json", "csv"])
+```
+
+**CLI:**
+
+```bash
+# Download all files for a single video
+yt-network-scraper video "URL" --download ./output
+
+# Download all files for a batch
+yt-network-scraper batch --file urls.txt --workers 4 --download ./dataset
+
+# Download channel data
+yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --download ./channel_data
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:
