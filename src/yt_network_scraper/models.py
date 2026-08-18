@@ -143,6 +143,82 @@ class VideoResult:
 
 
 @dataclass(slots=True)
+class StreamFormat:
+    """A single downloadable stream format from YouTube's streamingData.
+
+    Attributes:
+        itag: YouTube format code (e.g. 22 for 720p mp4, 137 for 1080p video-only).
+        url: Download URL for this stream.
+        mime_type: MIME type (e.g. "video/mp4", "audio/mp4").
+        quality: Quality label (e.g. "720p", "medium", "audio only").
+        quality_label: Human-readable quality (e.g. "720p") or None for audio.
+        bitrate: Bitrate in bits per second.
+        width: Video width in pixels (None for audio-only).
+        height: Video height in pixels (None for audio-only).
+        fps: Frames per second (None for audio-only).
+        content_length: File size in bytes (if known).
+        has_audio: Whether this stream includes audio.
+        has_video: Whether this stream includes video.
+        format_note: Additional note (e.g. "DASH video", "DASH audio").
+    """
+
+    itag: int
+    url: str
+    mime_type: str = ""
+    quality: str = ""
+    quality_label: str | None = None
+    bitrate: int | None = None
+    width: int | None = None
+    height: int | None = None
+    fps: int | None = None
+    content_length: int | None = None
+    has_audio: bool = False
+    has_video: bool = False
+    format_note: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return _to_serializable(asdict(self))
+
+
+@dataclass(slots=True)
+class DownloadResult:
+    """Result of downloading a video file.
+
+    Attributes:
+        video_id: The YouTube video ID.
+        output_path: Path where the file was saved.
+        format_itag: The itag of the downloaded format.
+        file_size_bytes: Size of the downloaded file in bytes.
+        mime_type: MIME type of the downloaded file.
+        quality: Quality label of the downloaded stream.
+        merged: Whether audio and video were merged with ffmpeg.
+        audio_path: Path to the audio file if merged (None otherwise).
+        video_path: Path to the video file if merged (None otherwise).
+        elapsed_seconds: Download time in seconds.
+        error: Error message if the download failed (None on success).
+    """
+
+    video_id: str = ""
+    output_path: str = ""
+    format_itag: int = 0
+    file_size_bytes: int = 0
+    mime_type: str = ""
+    quality: str = ""
+    merged: bool = False
+    audio_path: str | None = None
+    video_path: str | None = None
+    elapsed_seconds: float = 0.0
+    error: str | None = None
+
+    @property
+    def success(self) -> bool:
+        return self.error is None and self.file_size_bytes > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return _to_serializable(asdict(self))
+
+
+@dataclass(slots=True)
 class BatchError:
     """Error for a single failed video in a batch."""
 

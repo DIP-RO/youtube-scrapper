@@ -466,6 +466,91 @@ yt-network-scraper batch --file urls.txt --workers 4 --download ./dataset
 yt-network-scraper channel "@handle" --max-videos 50 --workers 4 --download ./channel_data
 ```
 
+### Video File Download
+
+Download actual YouTube video files to disk. The scraper extracts stream URLs from YouTube's `streamingData` payload and downloads the video file. For high-quality adaptive formats (1080p+), audio and video are downloaded separately and merged with ffmpeg if available.
+
+```python
+from yt_network_scraper import YouTubeScraper, ScraperConfig
+
+with YouTubeScraper() as scraper:
+    # Download best quality (auto-merges with ffmpeg if needed)
+    result = scraper.download_video_file(
+        "https://www.youtube.com/watch?v=VIDEO_ID",
+        output_path="./video.mp4",
+        quality="best",
+    )
+    if result.success:
+        print(f"Downloaded {result.file_size_bytes} bytes to {result.output_path}")
+        print(f"Merged: {result.merged}")
+
+    # Download specific quality
+    result = scraper.download_video_file(
+        "VIDEO_ID",
+        output_path="./output/",
+        quality="720p",
+    )
+
+    # Download audio only
+    result = scraper.download_video_file(
+        "VIDEO_ID",
+        output_path="./audio.m4a",
+        quality="audio",
+    )
+
+    # List available formats without downloading
+    formats = scraper.get_streams("VIDEO_ID")
+    for f in formats:
+        print(f"  {f.itag} {f.quality_label or f.quality} {f.mime_type}")
+```
+
+**CLI:**
+
+```bash
+# Download best quality
+yt-network-scraper download "https://www.youtube.com/watch?v=VIDEO_ID" -o video.mp4
+
+# Download specific quality
+yt-network-scraper download "VIDEO_ID" -o video.mp4 --quality 720p
+
+# Download audio only
+yt-network-scraper download "VIDEO_ID" -o audio.m4a --quality audio
+
+# List available formats without downloading
+yt-network-scraper download "VIDEO_ID" --list-formats
+```
+
+**Output of `--list-formats`:**
+```
+Available formats for VIDEO_ID:
+  ITAG  TYPE          QUALITY         SIZE  NOTE
+----------------------------------------------------------------------
+    18  audio+video   360p        976.6 KB  progressive
+    22  audio+video   720p          4.8 MB  progressive
+   137  video         1080p        47.7 MB  DASH video
+   136  video         720p         19.1 MB  DASH video
+   140  audio         medium        1.9 MB  DASH audio
+   139  audio         low         488.3 KB  DASH audio
+```
+
+**Quality options:**
+
+| Quality | Description |
+|---------|-------------|
+| `best` | Best available quality (merges with ffmpeg if needed) |
+| `worst` | Lowest quality progressive stream |
+| `720p` | Specific resolution (falls back to video-only if no progressive) |
+| `1080p` | 1080p (requires ffmpeg for audio merge) |
+| `4k` | 4K/2160p (requires ffmpeg for audio merge) |
+| `audio` | Audio only (m4a or webm) |
+
+**ffmpeg note:** For 1080p and higher, YouTube serves video and audio as separate streams. The downloader automatically merges them if ffmpeg is installed. Without ffmpeg, the video and audio files are saved separately.
+
+Install ffmpeg:
+- macOS: `brew install ffmpeg`
+- Ubuntu: `sudo apt install ffmpeg`
+- Windows: Download from https://ffmpeg.org/download.html
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

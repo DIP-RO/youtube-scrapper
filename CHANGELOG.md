@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-18
+
+### Added — Video File Download
+- **Full video download** — download actual YouTube video files to disk
+  - `scraper.download_video_file(url, output, quality)` Python API
+  - `yt-network-scraper download` CLI subcommand
+  - Quality selection: best, worst, 720p, 1080p, 4k, audio
+  - Progressive format download (combined audio+video, up to 720p)
+  - Adaptive format download with ffmpeg merging (1080p+)
+  - Audio-only extraction
+  - `scraper.get_streams(url)` to list available formats
+  - `--list-formats` CLI flag to show available formats without downloading
+  - Progress callback for download progress monitoring
+- New models: `StreamFormat`, `DownloadResult`
+- New module: `downloader.py` with stream extraction and download logic
+- 55 new tests (313 total)
+
+### Fixed
+- Bug in `_extension_for_mime`: `audio/mp4` was returning `mp4` instead of `m4a`
+  - Audio MIME types now checked before video MIME types
+
 ## [2.1.0] - 2026-08-18
 
 ### Added

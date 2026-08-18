@@ -55,6 +55,18 @@ from .export import (
     video_to_jsonl,
     video_to_xlsx,
 )
+from .downloader import (
+    download_stream,
+    download_video as download_video_file,
+    extract_streams,
+    has_ffmpeg,
+    merge_audio_video,
+    select_best_audio,
+    select_best_progressive,
+    select_best_video,
+    select_by_quality,
+    select_worst_progressive,
+)
 from .filters import CommentFilter, filter_comments, search_comments, top_comments
 from .models import (
     AccessStatus,
@@ -62,8 +74,10 @@ from .models import (
     BatchResult,
     Comment,
     DislikeData,
+    DownloadResult,
     Engagement,
     NetworkInfo,
+    StreamFormat,
     Summary,
     Transcript,
     TranscriptSegment,
@@ -100,6 +114,8 @@ __all__ = [
     "NetworkInfo",
     "BatchResult",
     "BatchError",
+    "StreamFormat",
+    "DownloadResult",
     # Export
     "export_video",
     "export_batch",
@@ -115,6 +131,17 @@ __all__ = [
     "batch_comments_to_csv",
     "download_video",
     "download_batch",
+    # Downloader (video file download)
+    "extract_streams",
+    "download_stream",
+    "download_video_file",
+    "has_ffmpeg",
+    "merge_audio_video",
+    "select_best_video",
+    "select_best_audio",
+    "select_best_progressive",
+    "select_worst_progressive",
+    "select_by_quality",
     # Sentiment
     "analyze_sentiment",
     "analyze_comment_sentiment",

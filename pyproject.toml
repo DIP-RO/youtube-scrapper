@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-network-scraper"
-version = "2.1.0"
+version = "2.2.0"
 description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
 readme = "README_PYPY.md"
 license = "MIT"

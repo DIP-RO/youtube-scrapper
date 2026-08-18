@@ -23,12 +23,17 @@ from yt_network_scraper import (
     NetworkInfo,
     BatchResult,
     BatchError,
+    StreamFormat,
+    DownloadResult,
     export_video,
     export_batch,
     analyze_sentiment,
     analyze_video_sentiment,
     CommentFilter,
     filter_comments,
+    download_video_file,
+    extract_streams,
+    has_ffmpeg,
 )
 
 
@@ -59,6 +64,8 @@ def test_all_exports():
         "NetworkInfo",
         "BatchResult",
         "BatchError",
+        "StreamFormat",
+        "DownloadResult",
         # Export
         "export_video",
         "export_batch",
@@ -74,6 +81,17 @@ def test_all_exports():
         "batch_comments_to_csv",
         "download_video",
         "download_batch",
+        # Downloader (video file download)
+        "extract_streams",
+        "download_stream",
+        "download_video_file",
+        "has_ffmpeg",
+        "merge_audio_video",
+        "select_best_video",
+        "select_best_audio",
+        "select_best_progressive",
+        "select_worst_progressive",
+        "select_by_quality",
         # Sentiment
         "analyze_sentiment",
         "analyze_comment_sentiment",

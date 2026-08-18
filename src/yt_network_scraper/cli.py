@@ -111,6 +111,28 @@ def build_parser() -> argparse.ArgumentParser:
     playlist_parser.add_argument("--max-retries", type=int, default=3, help="Max retry attempts (default: 3)")
     playlist_parser.add_argument("--retry-delay", type=float, default=5.0, help="Seconds to wait before retry (default: 5.0)")
 
+    # --- download subcommand ---
+    download_parser = subparsers.add_parser(
+        "download",
+        help="Download a YouTube video file to disk",
+        description="Download a YouTube video file. Extracts stream URLs and downloads the video. For high-quality (adaptive) formats, audio and video are merged with ffmpeg if available.",
+    )
+    download_parser.add_argument("url", help="YouTube watch URL, youtu.be URL, or 11-char video ID")
+    download_parser.add_argument(
+        "-o", "--output",
+        type=Path,
+        default=Path("."),
+        help="Output file path or directory (default: current directory)",
+    )
+    download_parser.add_argument(
+        "--quality",
+        default="best",
+        help="Quality: best, worst, 720p, 1080p, 4k, audio (default: best)",
+    )
+    download_parser.add_argument("--timeout", type=int, default=25, help="Browser timeout in seconds (default: 25)")
+    download_parser.add_argument("--no-headless", action="store_true", help="Show Chrome while scraping")
+    download_parser.add_argument("--list-formats", action="store_true", help="List available formats without downloading")
+
     return parser
 
 
@@ -126,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_channel_command(args)
     if args.command == "playlist":
         return _run_playlist_command(args)
+    if args.command == "download":
+        return _run_download_command(args)
     return 1
 
 
@@ -291,6 +315,80 @@ def _run_batch_scrape(args: argparse.Namespace, urls: list[str]) -> int:
         _write_output(content, args)
 
     return 0 if batch.failed == 0 else 1
+
+
+def _format_bytes(size: int) -> str:
+    """Format bytes as human-readable string."""
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
+def _run_download_command(args: argparse.Namespace) -> int:
+    """Execute the ``download`` subcommand."""
+    from .downloader import has_ffmpeg
+
+    config = ScraperConfig(
+        headless=not args.no_headless,
+        timeout=args.timeout,
+    )
+
+    try:
+        with YouTubeScraper(config) as scraper:
+            # List formats mode
+            if args.list_formats:
+                formats = scraper.get_streams(args.url)
+                if not formats:
+                    print("No downloadable formats found. Video may be DRM-protected or rental.", file=sys.stderr)
+                    return 1
+                print(f"Available formats for {args.url}:", file=sys.stderr)
+                print(f"{'ITAG':>6}  {'TYPE':<12}  {'QUALITY':<10}  {'SIZE':>10}  {'NOTE':<20}", file=sys.stderr)
+                print("-" * 70, file=sys.stderr)
+                for f in formats:
+                    size = f"{_format_bytes(f.content_length)}" if f.content_length else "?"
+                    ftype = "audio+video" if f.has_audio and f.has_video else ("video" if f.has_video else "audio")
+                    print(f"{f.itag:>6}  {ftype:<12}  {(f.quality_label or f.quality):<10}  {size:>10}  {f.format_note:<20}", file=sys.stderr)
+                return 0
+
+            # Download mode
+            def progress(downloaded: int, total: int, speed: float) -> None:
+                if total > 0:
+                    pct = downloaded * 100 / total
+                    speed_str = f"{_format_bytes(int(speed))}/s" if speed > 0 else "?"
+                    print(f"\r  {pct:5.1f}%  {_format_bytes(downloaded)}/{_format_bytes(total)}  {speed_str}", end="", file=sys.stderr, flush=True)
+
+            print(f"Downloading {args.url} (quality: {args.quality})...", file=sys.stderr)
+            if not has_ffmpeg() and args.quality not in ("worst", "audio"):
+                print("Note: ffmpeg not found. High-quality formats will be saved as separate video+audio files.", file=sys.stderr)
+                print("      Install ffmpeg to enable automatic merging: https://ffmpeg.org/download.html", file=sys.stderr)
+
+            result = scraper.download_video_file(
+                args.url,
+                output_path=str(args.output),
+                quality=args.quality,
+                progress_callback=progress,
+            )
+
+    except ScraperError as exc:
+        print(f"\nError: {exc}", file=sys.stderr)
+        return 1
+
+    print(file=sys.stderr)  # New line after progress
+
+    if result.success:
+        print(f"Downloaded: {result.output_path}", file=sys.stderr)
+        print(f"  Size: {_format_bytes(result.file_size_bytes)}", file=sys.stderr)
+        print(f"  Quality: {result.quality}", file=sys.stderr)
+        print(f"  Merged: {'yes (ffmpeg)' if result.merged else 'no'}", file=sys.stderr)
+        if result.audio_path and not result.merged:
+            print(f"  Audio: {result.audio_path}", file=sys.stderr)
+        print(f"  Time: {result.elapsed_seconds:.1f}s", file=sys.stderr)
+        return 0
+    else:
+        print(f"Download failed: {result.error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

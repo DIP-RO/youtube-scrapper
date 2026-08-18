@@ -38,8 +38,10 @@ from .models import (
     BatchResult,
     Comment,
     DislikeData,
+    DownloadResult,
     Engagement,
     NetworkInfo,
+    StreamFormat,
     Summary,
     Transcript,
     VideoMetadata,
@@ -53,6 +55,7 @@ from .parsing import (
     parse_metadata,
 )
 from .scraper import fetch_comment_data, fetch_dislikes, fetch_transcript
+from .downloader import download_video as _download_video_file, extract_streams
 from .utils import detect_access_block, extract_video_id, find_all_keys, find_key, int_or_none, summarize_text
 
 logger = logging.getLogger(__name__)
@@ -258,6 +261,98 @@ class YouTubeScraper:
             summary=summary,
             comments=comments,
             network=network_info,
+        )
+
+    def get_streams(self, url_or_id: str) -> list[StreamFormat]:
+        """Extract downloadable stream formats for a video.
+
+        Loads the watch page and extracts all available stream formats
+        from the player response's ``streamingData``.
+
+        Args:
+            url_or_id: YouTube URL or video ID.
+
+        Returns:
+            List of :class:`StreamFormat` objects with download URLs.
+
+        Raises:
+            InvalidVideoURLError: If the URL/ID cannot be parsed.
+            AccessBlockedException: If YouTube blocks access.
+            BrowserNotInitializedError: If not used as a context manager.
+        """
+        if self.driver is None:
+            raise BrowserNotInitializedError("YouTubeScraper must be used as a context manager")
+
+        try:
+            video_id = extract_video_id(url_or_id)
+        except ValueError as exc:
+            raise InvalidVideoURLError(str(exc)) from exc
+
+        watch_url = f"https://www.youtube.com/watch?v={video_id}&hl=en&persist_hl=1"
+        html, _ = self._load_watch_html(watch_url)
+        player = extract_json_assignment(html, "ytInitialPlayerResponse") or {}
+        return extract_streams(player)
+
+    def download_video_file(
+        self,
+        url_or_id: str,
+        output_path: str,
+        quality: str = "best",
+        progress_callback: Any = None,
+    ) -> DownloadResult:
+        """Download a YouTube video file to disk.
+
+        Extracts stream URLs from the watch page, selects the best format
+        for the requested quality, and downloads the file. For adaptive
+        formats (high quality), audio and video are downloaded separately
+        and merged with ffmpeg if available.
+
+        Args:
+            url_or_id: YouTube URL or video ID.
+            output_path: File path (for progressive) or directory
+                (for adaptive — file names auto-generated).
+            quality: Quality preference: "best", "worst", "720p",
+                "1080p", "4k", "audio". Default: "best".
+            progress_callback: Optional callback(downloaded, total, speed).
+
+        Returns:
+            A :class:`DownloadResult` with download status and file path.
+
+        Raises:
+            InvalidVideoURLError: If the URL/ID cannot be parsed.
+            BrowserNotInitializedError: If not used as a context manager.
+
+        Example::
+
+            with YouTubeScraper() as scraper:
+                result = scraper.download_video_file(
+                    "https://www.youtube.com/watch?v=VIDEO_ID",
+                    output_path="./video.mp4",
+                    quality="720p",
+                )
+                if result.success:
+                    print(f"Downloaded to {result.output_path}")
+        """
+        if self.driver is None:
+            raise BrowserNotInitializedError("YouTubeScraper must be used as a context manager")
+
+        try:
+            video_id = extract_video_id(url_or_id)
+        except ValueError as exc:
+            raise InvalidVideoURLError(str(exc)) from exc
+
+        watch_url = f"https://www.youtube.com/watch?v={video_id}&hl=en&persist_hl=1"
+        html, _ = self._load_watch_html(watch_url)
+        player = extract_json_assignment(html, "ytInitialPlayerResponse") or {}
+        formats = extract_streams(player)
+
+        return _download_video_file(
+            formats=formats,
+            video_id=video_id,
+            output_path=output_path,
+            quality=quality,
+            session=self.session,
+            progress_callback=progress_callback,
         )
 
     def batch_scrape(
