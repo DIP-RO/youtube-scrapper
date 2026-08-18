@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-network-scraper"
-version = "1.1.4"
+version = "1.1.5"
 description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
-readme = "README.md"
+readme = "README_PYPY.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
@@ -64,10 +64,9 @@ include = [
     "tests",
     "examples",
     "README.md",
+    "README_PYPY.md",
     "LICENSE",
     "CHANGELOG.md",
-    "docs/images/*.svg",
-    "docs/images/*.png",
     "Dockerfile",
     "docker-compose.yml",
     ".dockerignore",
