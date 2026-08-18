@@ -49,6 +49,8 @@ def test_all_exports():
         "Summary",
         "AccessStatus",
         "NetworkInfo",
+        "BatchResult",
+        "BatchError",
     }
     assert set(yt_network_scraper.__all__) == expected
 

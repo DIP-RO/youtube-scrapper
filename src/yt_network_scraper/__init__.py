@@ -22,6 +22,8 @@ from .exceptions import (
 )
 from .models import (
     AccessStatus,
+    BatchError,
+    BatchResult,
     Comment,
     DislikeData,
     Engagement,
@@ -52,6 +54,8 @@ __all__ = [
     "Summary",
     "AccessStatus",
     "NetworkInfo",
+    "BatchResult",
+    "BatchError",
 ]
 
 __version__ = "1.0.0"

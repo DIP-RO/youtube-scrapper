@@ -130,6 +130,56 @@ scraper.get_video("https://www.youtube.com/shorts/dQw4w9WgXcQ")
 scraper.get_video("dQw4w9WgXcQ")
 ```
 
+### Batch Scraping (Multiple Videos Concurrently)
+
+Scrape multiple videos in parallel — each video gets its own browser instance running in a thread pool. Failed videos are captured without stopping the batch:
+
+```python
+from yt_network_scraper import YouTubeScraper, ScraperConfig
+
+config = ScraperConfig(
+    max_comments=25,
+    max_workers=4,       # 4 concurrent Chrome instances
+    batch_delay=2.0,     # 2s delay between starting each task
+)
+
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape([
+        "https://youtu.be/VIDEO1",
+        "https://youtu.be/VIDEO2",
+        "https://youtu.be/VIDEO3",
+        "VIDEO_ID_4",
+    ])
+
+    print(f"Succeeded: {batch.succeeded}, Failed: {batch.failed}")
+    print(f"Time: {batch.elapsed_seconds}s")
+
+    for result in batch.results:
+        print(f"  {result.video_id}: {result.metadata.title}")
+
+    for err in batch.errors:
+        print(f"  FAILED: {err.url_or_id} — {err.error_message}")
+```
+
+**With a progress callback** (useful for long batches):
+
+```python
+def progress(idx, total, video_id, status):
+    print(f"  [{idx}/{total}] {status.upper():5s} — {video_id}")
+
+batch = scraper.batch_scrape(urls, progress_callback=progress)
+```
+
+**CLI batch command:**
+
+```bash
+# Scrape multiple videos concurrently
+yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.json
+
+# Or read URLs from a file (one per line)
+yt-network-scraper batch --file urls.txt --workers 3 --comments 50 --out batch.json
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:
@@ -313,35 +363,6 @@ The return type of `get_video()`. Contains:
 | `engagement` | `Engagement` | Likes, views, dislikes, comment counts |
 | `transcript` | `Transcript` | Transcript segments and full text |
 | `summary` | `Summary` | Extractive summary |
-| `comments` | `list[Comment]` | Scraped comments |
-| `network` | `NetworkInfo` | Diagnostic info about the scraping process |
-
-Call `result.to_dict()` to serialize the entire result to a JSON-compatible dictionary.
-
-### Exceptions
-
-```python
-from yt_network_scraper import (
-    ScraperError,              # Base exception
-    InvalidVideoURLError,      # URL/ID could not be parsed
-    AccessBlockedException,    # YouTube returned an access challenge
-    SeleniumNotInstalledError, # Selenium is not installed
-    BrowserNotInitializedError, # Not used as a context manager
-)
-```
-
-## CLI Usage
-
-```bash
-# Scrape a video and print JSON to stdout
-yt-network-scraper video "https://www.youtube.com/watch?v=VIDEO_ID"
-
-# Save to a file with pretty-printing
-yt-network-scraper video VIDEO_ID --out result.json --pretty
-
-# Fetch up to 100 comments in French
-yt-network-scraper video VIDEO_ID --comments 100 --lang fr
-
 # Show Chrome (for debugging)
 yt-network-scraper video VIDEO_ID --no-headless
 
@@ -362,6 +383,35 @@ All configuration is done through the `ScraperConfig` dataclass:
 | `request_delay` | `1.5` | Base delay between fallback network requests (seconds) |
 | `max_page_retries` | `2` | Number of retries when YouTube returns a block page |
 | `user_agent` | Chrome 125 UA | User-Agent string for the browser and HTTP session |
+
+## Package Architecture
+
+The package is organized into focused, single-responsibility modules under `src/yt_network_scraper/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
+
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.png" alt="Module dependency graph" width="680" />
+
+| Module | Responsibility |
+|--------|---------------|
+| `__init__.py` | Public API exports — `YouTubeScraper`, `ScraperConfig`, all models, all exceptions |
+| `client.py` | HTTP/network layer — Selenium browser lifecycle, Chrome DevTools log capture, innertube API calls, Return YouTube Dislike API integration |
+| `scraper.py` | Orchestration layer — coordinates the full scrape workflow: load page → capture network → parse metadata → fetch transcript → fetch comments → fetch dislikes → generate summary → build `VideoResult` |
+| `parsing.py` | Pure parsing functions — extracts metadata, transcript, comments, and access-block status from YouTube JSON payloads. No network calls. |
+| `models.py` | Typed dataclass models — `VideoResult`, `VideoMetadata`, `Transcript`, `TranscriptSegment`, `Comment`, `Engagement`, `DislikeData`, `Summary`, `AccessStatus`, `NetworkInfo`. Each has `to_dict()` for JSON serialization. |
+| `exceptions.py` | Exception hierarchy — `ScraperError` (base), `InvalidVideoURLError`, `AccessBlockedException`, `SeleniumNotInstalledError`, `BrowserNotInitializedError`, `TranscriptUnavailableError` |
+| `utils.py` | Utilities — URL validation, video ID extraction, text summarization, sentence splitting, key lookup helpers, HTML unescaping |
+| `cli.py` | Command-line interface — argparse-based CLI with `video` subcommand |
+
+### How a scrape works
+
+<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.png" alt="Scrape flowchart" width="820" />
+
+### Design principles
+
+- **Network layer is isolated** — all Selenium and HTTP calls live in `client.py`. Parsing functions in `parsing.py` are pure and take dicts as input, making them trivial to test with fixtures.
+- **Typed models everywhere** — the scraper never returns raw dicts. Every result is a typed dataclass with documented fields, optional fields are `None` when unavailable, and `to_dict()` produces clean JSON.
+- **Defensive parsing** — YouTube changes payload shapes frequently. Every parser uses safe key lookups (`find_key`, `find_all_keys`) and returns `None` or empty lists for missing fields instead of raising exceptions.
+- **No bot evasion** — the scraper detects access blocks but never tries to bypass them. If YouTube returns a CAPTCHA or consent wall, the `network.access_status` field reports it and the scrape completes with available data.
+- **Configurable behavior** — `ScraperConfig` controls headless mode, timeout, retries, delays, comment limits, transcript language, and user agent. Sensible defaults work for most cases.
 
 ## Error Handling
 

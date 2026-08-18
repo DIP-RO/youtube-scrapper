@@ -18,6 +18,7 @@ import logging
 import os
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,10 +28,13 @@ from .exceptions import (
     AccessBlockedException,
     BrowserNotInitializedError,
     InvalidVideoURLError,
+    ScraperError,
     SeleniumNotInstalledError,
 )
 from .models import (
     AccessStatus,
+    BatchError,
+    BatchResult,
     Comment,
     DislikeData,
     Engagement,
@@ -71,6 +75,8 @@ class ScraperConfig:
         request_delay: Base delay (seconds) between fallback network requests.
         max_page_retries: Number of page-load retries when YouTube returns a block page.
         user_agent: User-Agent string for the browser and HTTP session.
+        max_workers: Maximum number of concurrent browser instances for batch scraping.
+        batch_delay: Delay (seconds) between starting each concurrent scrape task.
     """
 
     headless: bool = True
@@ -80,6 +86,8 @@ class ScraperConfig:
     request_delay: float = 1.5
     max_page_retries: int = 2
     user_agent: str = DEFAULT_USER_AGENT
+    max_workers: int = 3
+    batch_delay: float = 2.0
 
 
 class YouTubeScraper:
@@ -249,6 +257,104 @@ class YouTubeScraper:
             summary=summary,
             comments=comments,
             network=network_info,
+        )
+
+    def batch_scrape(
+        self,
+        urls_or_ids: list[str],
+        max_workers: int | None = None,
+        batch_delay: float | None = None,
+        progress_callback: Any = None,
+    ) -> BatchResult:
+        """Scrape multiple YouTube videos concurrently.
+
+        Each video is scraped in its own browser instance, running in parallel
+        using a thread pool. Failed videos are captured in the errors list
+        without stopping the batch.
+
+        Args:
+            urls_or_ids: List of YouTube URLs, youtu.be URLs, or 11-char video IDs.
+            max_workers: Override max concurrent workers (default: config.max_workers).
+            batch_delay: Override delay between starting each task (default: config.batch_delay).
+            progress_callback: Optional callable ``(index, total, video_id, status)`` called
+                after each video completes. ``status`` is ``"ok"`` or ``"error"``.
+
+        Returns:
+            A :class:`BatchResult` with successful results and errors.
+
+        Example::
+
+            with YouTubeScraper(ScraperConfig(max_workers=4)) as scraper:
+                batch = scraper.batch_scrape([
+                    "https://youtu.be/VIDEO1",
+                    "https://youtu.be/VIDEO2",
+                    "VIDEO_ID_3",
+                ])
+                print(f"Succeeded: {batch.succeeded}, Failed: {batch.failed}")
+                for result in batch.results:
+                    print(result.video_id, result.metadata.title)
+                for err in batch.errors:
+                    print(err.url_or_id, err.error_message)
+        """
+        workers = max_workers or self.config.max_workers
+        delay = batch_delay if batch_delay is not None else self.config.batch_delay
+        total = len(urls_or_ids)
+        results: list[VideoResult] = []
+        errors: list[BatchError] = []
+        start_time = time.time()
+
+        def _scrape_one(url_or_id: str) -> tuple[str, VideoResult | None, BatchError | None]:
+            """Scrape a single video in its own browser instance."""
+            try:
+                # Each thread gets its own YouTubeScraper with the same config
+                scraper = YouTubeScraper(self.config)
+                scraper.__enter__()
+                try:
+                    result = scraper.get_video(url_or_id)
+                    return url_or_id, result, None
+                finally:
+                    scraper.__exit__()
+            except ScraperError as exc:
+                return url_or_id, None, BatchError(
+                    url_or_id=url_or_id,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                )
+            except Exception as exc:  # noqa: BLE001
+                return url_or_id, None, BatchError(
+                    url_or_id=url_or_id,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                )
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {}
+            for i, url_or_id in enumerate(urls_or_ids):
+                if i > 0 and delay > 0:
+                    time.sleep(delay)
+                future = executor.submit(_scrape_one, url_or_id)
+                futures[future] = url_or_id
+
+            completed = 0
+            for future in as_completed(futures):
+                url_or_id, result, error = future.result()
+                completed += 1
+                if result is not None:
+                    results.append(result)
+                else:
+                    errors.append(error)  # type: ignore[arg-type]
+                if progress_callback is not None:
+                    status = "ok" if result is not None else "error"
+                    progress_callback(completed, total, url_or_id, status)
+
+        elapsed = time.time() - start_time
+        return BatchResult(
+            total=total,
+            succeeded=len(results),
+            failed=len(errors),
+            results=results,
+            errors=errors,
+            elapsed_seconds=round(elapsed, 2),
         )
 
     # -- Browser / network internals -------------------------------------

@@ -142,6 +142,40 @@ class VideoResult:
         return _to_serializable(asdict(self))
 
 
+@dataclass(slots=True)
+class BatchError:
+    """Error for a single failed video in a batch."""
+
+    url_or_id: str
+    error_type: str
+    error_message: str
+
+
+@dataclass(slots=True)
+class BatchResult:
+    """Result of scraping multiple videos concurrently.
+
+    Attributes:
+        total: Total number of videos requested.
+        succeeded: Number of videos successfully scraped.
+        failed: Number of videos that failed.
+        results: List of successful VideoResult objects.
+        errors: List of BatchError objects for failed videos.
+        elapsed_seconds: Total wall-clock time for the batch.
+    """
+
+    total: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    results: list[VideoResult] = field(default_factory=list)
+    errors: list[BatchError] = field(default_factory=list)
+    elapsed_seconds: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the batch result to a plain dict suitable for JSON output."""
+        return _to_serializable(asdict(self))
+
+
 def _to_serializable(obj: Any) -> Any:
     """Recursively convert dataclass-asdict output to JSON-safe types."""
     if isinstance(obj, dict):

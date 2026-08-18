@@ -130,6 +130,56 @@ scraper.get_video("https://www.youtube.com/shorts/dQw4w9WgXcQ")
 scraper.get_video("dQw4w9WgXcQ")
 ```
 
+### Batch Scraping (Multiple Videos Concurrently)
+
+Scrape multiple videos in parallel — each video gets its own browser instance running in a thread pool. Failed videos are captured without stopping the batch:
+
+```python
+from yt_network_scraper import YouTubeScraper, ScraperConfig
+
+config = ScraperConfig(
+    max_comments=25,
+    max_workers=4,       # 4 concurrent Chrome instances
+    batch_delay=2.0,     # 2s delay between starting each task
+)
+
+with YouTubeScraper(config) as scraper:
+    batch = scraper.batch_scrape([
+        "https://youtu.be/VIDEO1",
+        "https://youtu.be/VIDEO2",
+        "https://youtu.be/VIDEO3",
+        "VIDEO_ID_4",
+    ])
+
+    print(f"Succeeded: {batch.succeeded}, Failed: {batch.failed}")
+    print(f"Time: {batch.elapsed_seconds}s")
+
+    for result in batch.results:
+        print(f"  {result.video_id}: {result.metadata.title}")
+
+    for err in batch.errors:
+        print(f"  FAILED: {err.url_or_id} — {err.error_message}")
+```
+
+**With a progress callback** (useful for long batches):
+
+```python
+def progress(idx, total, video_id, status):
+    print(f"  [{idx}/{total}] {status.upper():5s} — {video_id}")
+
+batch = scraper.batch_scrape(urls, progress_callback=progress)
+```
+
+**CLI batch command:**
+
+```bash
+# Scrape multiple videos concurrently
+yt-network-scraper batch "URL1" "URL2" "URL3" --workers 4 --pretty --out batch.json
+
+# Or read URLs from a file (one per line)
+yt-network-scraper batch --file urls.txt --workers 3 --comments 50 --out batch.json
+```
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

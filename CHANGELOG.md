@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-18
+
+### Added
+- **Concurrent batch scraping** — scrape multiple videos simultaneously with `scraper.batch_scrape(urls)`
+- Each video runs in its own browser instance via ThreadPoolExecutor
+- `BatchResult` model with `results`, `errors`, `succeeded`, `failed`, `elapsed_seconds`
+- `BatchError` model captures per-video failures without stopping the batch
+- `max_workers` and `batch_delay` config options for controlling concurrency
+- Progress callback support for tracking long-running batches
+- CLI `batch` subcommand: `yt-network-scraper batch "URL1" "URL2" --workers 4`
+- CLI `--file` option to read URLs from a file (one per line)
+- 11 new tests for batch functionality (167 total)
+
+### Example
+```python
+with YouTubeScraper(ScraperConfig(max_workers=4)) as scraper:
+    batch = scraper.batch_scrape(["URL1", "URL2", "URL3"])
+    print(f"Succeeded: {batch.succeeded}, Failed: {batch.failed}")
+```
+
 ## [1.1.5] - 2026-08-18
 
 ### Changed
