@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-network-scraper"
-version = "1.1.3"
+version = "1.1.4"
 description = "A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Dipro Paul", email = "dipropaul032@gmail.com", url = "https://github.com/DIP-RO" },
+    { name = "Dipro Paul" },
 ]
 keywords = [
     "youtube",

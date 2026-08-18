@@ -1,5 +1,7 @@
 # yt-network-scraper
 
+> **Follow for more packages:** I'm actively building Python packages that make development easier — scraping, automation, data tools, and more. Follow me on [GitHub](https://github.com/DIP-RO) and [LinkedIn](https://www.linkedin.com/in/dipro-paul) to stay updated on new releases.
+
 A network-first YouTube video scraper that extracts metadata, transcripts, comments, and summaries from captured network payloads using headless Chrome and Selenium.
 
 Unlike traditional DOM scrapers, this package opens a real browser via Selenium, captures network responses through Chrome DevTools performance logs, and parses YouTube's own JSON payloads (`ytInitialPlayerResponse`, `ytInitialData`, `ytcfg`). It then uses YouTube's innertube API for transcripts and comments. This approach is more resilient to UI changes and avoids brittle CSS selectors.
@@ -453,7 +455,10 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 Developed and maintained by **Dipro Paul**.
 
-Follow me on GitHub for latest updates: [github.com/DIP-RO](https://github.com/DIP-RO)
+- **GitHub:** [github.com/DIP-RO](https://github.com/DIP-RO)
+- **LinkedIn:** [linkedin.com/in/dipro-paul](https://www.linkedin.com/in/dipro-paul)
+
+I release Python packages that make development easier — scraping, automation, data tools, and more. Follow for new releases.
 
 ## Disclaimer
 
