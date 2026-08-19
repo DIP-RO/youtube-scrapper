@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "media-data-extractor"
-version = "4.1.0"
+version = "4.2.0"
 description = "Extract metadata, transcripts, comments, sentiment, and video files from YouTube. Includes video player, playlist management, and research pipeline."
 readme = "README_PYPY.md"
 license = "MIT"

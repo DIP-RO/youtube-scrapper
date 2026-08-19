@@ -81,6 +81,38 @@ pip install media-data-extractor
 
 **Prerequisites**: Google Chrome must be installed. Selenium Manager will automatically fetch a matching ChromeDriver in recent Selenium versions.
 
+### Lightweight install options
+
+```bash
+# Core scraping only (lightest)
+pip install media-data-extractor
+
+# With pandas integration for research datasets
+pip install media-data-extractor[research]
+
+# With dev tools (pytest, build, twine)
+pip install media-data-extractor[dev]
+```
+
+### Lightweight import — only loads what you use
+
+The package uses **lazy imports** — `import media_data_extractor` loads only
+core modules (models, exceptions, client). Heavy modules (player, pipeline,
+research, downloader, sentiment, filters, performance) load on first access.
+
+For the absolute lightest import path, use the `core` module:
+
+```python
+# Lightest import — only scraping, no optional modules
+from media_data_extractor.core import YouTubeScraper, ScraperConfig
+
+with YouTubeScraper() as scraper:
+    result = scraper.get_video("VIDEO_ID")
+```
+
+This loads only 7 modules instead of 16, and never imports selenium until
+`__enter__()` is called.
+
 ### Option 2: Docker (no Chrome installation needed)
 
 No need to install Chrome, Python, or any dependencies — Docker handles everything:

@@ -55,8 +55,14 @@ from .parsing import (
     parse_metadata,
 )
 from .scraper import fetch_comment_data, fetch_dislikes, fetch_transcript
-from .downloader import download_video as _download_video_file, extract_streams
 from .utils import detect_access_block, extract_video_id, find_all_keys, find_key, int_or_none, summarize_text
+
+# Lazy import — downloader is only needed for download_video_file and get_streams
+# This keeps client.py lightweight when only scraping is needed.
+def _get_downloader():
+    """Lazily import the downloader module."""
+    from . import downloader
+    return downloader
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +297,7 @@ class YouTubeScraper:
         watch_url = f"https://www.youtube.com/watch?v={video_id}&hl=en&persist_hl=1"
         html, _ = self._load_watch_html(watch_url)
         player = extract_json_assignment(html, "ytInitialPlayerResponse") or {}
-        return extract_streams(player)
+        return _get_downloader().extract_streams(player)
 
     def download_video_file(
         self,
@@ -344,9 +350,9 @@ class YouTubeScraper:
         watch_url = f"https://www.youtube.com/watch?v={video_id}&hl=en&persist_hl=1"
         html, _ = self._load_watch_html(watch_url)
         player = extract_json_assignment(html, "ytInitialPlayerResponse") or {}
-        formats = extract_streams(player)
+        formats = _get_downloader().extract_streams(player)
 
-        return _download_video_file(
+        return _get_downloader().download_video(
             formats=formats,
             video_id=video_id,
             output_path=output_path,

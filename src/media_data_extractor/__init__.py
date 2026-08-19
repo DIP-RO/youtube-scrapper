@@ -1,4 +1,4 @@
-"""media-data-extractor — A network-first YouTube video scraper and downloader.
+"""media-data-extractor — A network-first YouTube data extraction toolkit.
 
 Public API::
 
@@ -18,38 +18,32 @@ Public API::
     from media_data_extractor import export_video
     csv_data = export_video(result, format="csv")
 
-    # Sentiment analysis
-    from media_data_extractor import analyze_video_sentiment
-    sentiment = analyze_video_sentiment(result)
-    print(sentiment.overall_label)
-
-    # Comment filtering
-    from media_data_extractor import filter_comments, CommentFilter
-    filtered = filter_comments(result, keyword="great", min_likes=10)
-
     # Video file download
     with YouTubeScraper() as scraper:
         result = scraper.download_video_file("URL", "./video.mp4", quality="720p")
 
-    # Video player with playlist
-    from media_data_extractor import VideoPlayer, Playlist, Track
-    player = VideoPlayer(dry_run=True)
-    playlist = Playlist(name="My Mix")
-    playlist.add_track(Track(path="video.mp4"))
-    player.play_playlist(playlist)
+    # Research dataset (one call → CSV)
+    from media_data_extractor.research import collect_dataset
+    rows, summary = collect_dataset(urls=["URL1"], output_path="dataset.csv")
 
-    # Pipeline (scrape → filter → sentiment → export → download)
-    from media_data_extractor import ScrapePipeline
-    pipeline = ScrapePipeline(
-        stages=["scrape", "sentiment", "export"],
-        export_format="csv",
-        output_dir="./output",
-    )
-    result = pipeline.run(["URL1", "URL2"])
+Lightweight design:
+    - ``import media_data_extractor`` loads only core modules (models, exceptions, client).
+    - Heavy modules (player, pipeline, research, downloader, performance) load lazily on first access.
+    - Selenium is imported lazily inside YouTubeScraper.__enter__(), not at package import time.
+    - ``pip install media-data-extractor``            → core scraping + export + sentiment
+    - ``pip install media-data-extractor[research]``  → + pandas integration
+    - ``pip install media-data-extractor[dev]``       → + pytest, build, twine
 """
 
 from __future__ import annotations
 
+import importlib
+import sys
+from typing import Any
+
+# ---------------------------------------------------------------------------
+# Eager imports — core modules needed for basic scraping
+# ---------------------------------------------------------------------------
 from .client import ScraperConfig, YouTubeScraper
 from .exceptions import (
     AccessBlockedException,
@@ -59,35 +53,6 @@ from .exceptions import (
     SeleniumNotInstalledError,
     TranscriptUnavailableError,
 )
-from .export import (
-    batch_comments_to_csv,
-    batch_to_csv,
-    batch_to_jsonl,
-    batch_to_xlsx,
-    comments_to_csv,
-    download_batch,
-    download_video,
-    export_batch,
-    export_video,
-    transcript_to_srt,
-    transcript_to_txt,
-    video_to_csv,
-    video_to_jsonl,
-    video_to_xlsx,
-)
-from .downloader import (
-    download_stream,
-    download_video as download_video_file,
-    extract_streams,
-    has_ffmpeg,
-    merge_audio_video,
-    select_best_audio,
-    select_best_progressive,
-    select_best_video,
-    select_by_quality,
-    select_worst_progressive,
-)
-from .filters import CommentFilter, filter_comments, search_comments, top_comments
 from .models import (
     AccessStatus,
     BatchError,
@@ -104,53 +69,113 @@ from .models import (
     VideoMetadata,
     VideoResult,
 )
-from .performance import (
-    BackoffStrategy,
-    LRUCache,
-    RateLimiter,
-    chunk_list,
-    clear_all_caches,
-    get_metadata_cache,
-    get_stream_cache,
-    retry_with_backoff,
-)
-from .pipeline import (
-    PipelineResult,
-    PipelineStageResult,
-    ScrapePipeline,
-    VALID_STAGES,
-)
-from .player import (
-    Playlist,
-    Track,
-    VideoPlayer,
-    create_playlist_from_directory,
-    find_player_backend,
-    has_ffplay,
-    load_playlist,
-    save_playlist,
-)
-from .sentiment import (
-    CommentSentiment,
-    SentimentResult,
-    VideoSentiment,
-    analyze_comment_sentiment,
-    analyze_sentiment,
-    analyze_video_sentiment,
-)
-from .research import (
-    DatasetSummary,
-    batch_to_dataframe,
-    collect_comment_corpus,
-    collect_comparison_table,
-    collect_dataset,
-    collect_transcript_corpus,
-    comments_to_dataframe,
-    quick_scrape,
-    to_dataframe,
-)
+
+# ---------------------------------------------------------------------------
+# Lazy import registry — heavy modules loaded on first access
+# ---------------------------------------------------------------------------
+# Each entry maps an attribute name to (module_path, attribute_name).
+# The attribute is loaded on first access via __getattr__.
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    # Export module
+    "export_video": (".export", "export_video"),
+    "export_batch": (".export", "export_batch"),
+    "video_to_csv": (".export", "video_to_csv"),
+    "comments_to_csv": (".export", "comments_to_csv"),
+    "transcript_to_txt": (".export", "transcript_to_txt"),
+    "transcript_to_srt": (".export", "transcript_to_srt"),
+    "video_to_jsonl": (".export", "video_to_jsonl"),
+    "video_to_xlsx": (".export", "video_to_xlsx"),
+    "batch_to_csv": (".export", "batch_to_csv"),
+    "batch_to_jsonl": (".export", "batch_to_jsonl"),
+    "batch_to_xlsx": (".export", "batch_to_xlsx"),
+    "batch_comments_to_csv": (".export", "batch_comments_to_csv"),
+    "download_video": (".export", "download_video"),
+    "download_batch": (".export", "download_batch"),
+    # Downloader module
+    "extract_streams": (".downloader", "extract_streams"),
+    "download_stream": (".downloader", "download_stream"),
+    "download_video_file": (".downloader", "download_video"),
+    "has_ffmpeg": (".downloader", "has_ffmpeg"),
+    "merge_audio_video": (".downloader", "merge_audio_video"),
+    "select_best_video": (".downloader", "select_best_video"),
+    "select_best_audio": (".downloader", "select_best_audio"),
+    "select_best_progressive": (".downloader", "select_best_progressive"),
+    "select_worst_progressive": (".downloader", "select_worst_progressive"),
+    "select_by_quality": (".downloader", "select_by_quality"),
+    # Sentiment module
+    "analyze_sentiment": (".sentiment", "analyze_sentiment"),
+    "analyze_comment_sentiment": (".sentiment", "analyze_comment_sentiment"),
+    "analyze_video_sentiment": (".sentiment", "analyze_video_sentiment"),
+    "SentimentResult": (".sentiment", "SentimentResult"),
+    "CommentSentiment": (".sentiment", "CommentSentiment"),
+    "VideoSentiment": (".sentiment", "VideoSentiment"),
+    # Filters module
+    "CommentFilter": (".filters", "CommentFilter"),
+    "filter_comments": (".filters", "filter_comments"),
+    "search_comments": (".filters", "search_comments"),
+    "top_comments": (".filters", "top_comments"),
+    # Player module
+    "VideoPlayer": (".player", "VideoPlayer"),
+    "Playlist": (".player", "Playlist"),
+    "Track": (".player", "Track"),
+    "save_playlist": (".player", "save_playlist"),
+    "load_playlist": (".player", "load_playlist"),
+    "create_playlist_from_directory": (".player", "create_playlist_from_directory"),
+    "find_player_backend": (".player", "find_player_backend"),
+    "has_ffplay": (".player", "has_ffplay"),
+    # Pipeline module
+    "ScrapePipeline": (".pipeline", "ScrapePipeline"),
+    "PipelineResult": (".pipeline", "PipelineResult"),
+    "PipelineStageResult": (".pipeline", "PipelineStageResult"),
+    "VALID_STAGES": (".pipeline", "VALID_STAGES"),
+    # Performance module
+    "LRUCache": (".performance", "LRUCache"),
+    "RateLimiter": (".performance", "RateLimiter"),
+    "BackoffStrategy": (".performance", "BackoffStrategy"),
+    "retry_with_backoff": (".performance", "retry_with_backoff"),
+    "chunk_list": (".performance", "chunk_list"),
+    "get_metadata_cache": (".performance", "get_metadata_cache"),
+    "get_stream_cache": (".performance", "get_stream_cache"),
+    "clear_all_caches": (".performance", "clear_all_caches"),
+    # Research module
+    "collect_dataset": (".research", "collect_dataset"),
+    "collect_comment_corpus": (".research", "collect_comment_corpus"),
+    "collect_transcript_corpus": (".research", "collect_transcript_corpus"),
+    "collect_comparison_table": (".research", "collect_comparison_table"),
+    "quick_scrape": (".research", "quick_scrape"),
+    "to_dataframe": (".research", "to_dataframe"),
+    "batch_to_dataframe": (".research", "batch_to_dataframe"),
+    "comments_to_dataframe": (".research", "comments_to_dataframe"),
+    "DatasetSummary": (".research", "DatasetSummary"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy-load attributes from heavy modules on first access.
+
+    This keeps ``import media_data_extractor`` fast by only loading
+    core modules. Heavy modules (player, pipeline, research, etc.)
+    are loaded the first time their attributes are accessed.
+    """
+    if name in _LAZY_EXPORTS:
+        module_path, attr_name = _LAZY_EXPORTS[name]
+        module = importlib.import_module(module_path, __name__)
+        value = getattr(module, attr_name)
+        # Cache in this module's namespace so __getattr__ isn't called again
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """Return all available attributes for tab-completion."""
+    return sorted(list(globals().keys()) + list(_LAZY_EXPORTS.keys()))
+
+
+__version__ = "4.2.0"
 
 __all__ = [
+    # Core (eagerly loaded)
     "YouTubeScraper",
     "ScraperConfig",
     "ScraperError",
@@ -173,7 +198,7 @@ __all__ = [
     "BatchError",
     "StreamFormat",
     "DownloadResult",
-    # Export
+    # Lazy-loaded
     "export_video",
     "export_batch",
     "video_to_csv",
@@ -188,7 +213,6 @@ __all__ = [
     "batch_comments_to_csv",
     "download_video",
     "download_batch",
-    # Downloader (video file download)
     "extract_streams",
     "download_stream",
     "download_video_file",
@@ -199,19 +223,16 @@ __all__ = [
     "select_best_progressive",
     "select_worst_progressive",
     "select_by_quality",
-    # Sentiment
     "analyze_sentiment",
     "analyze_comment_sentiment",
     "analyze_video_sentiment",
     "SentimentResult",
     "CommentSentiment",
     "VideoSentiment",
-    # Filters
     "CommentFilter",
     "filter_comments",
     "search_comments",
     "top_comments",
-    # Player
     "VideoPlayer",
     "Playlist",
     "Track",
@@ -220,12 +241,10 @@ __all__ = [
     "create_playlist_from_directory",
     "find_player_backend",
     "has_ffplay",
-    # Pipeline
     "ScrapePipeline",
     "PipelineResult",
     "PipelineStageResult",
     "VALID_STAGES",
-    # Performance
     "LRUCache",
     "RateLimiter",
     "BackoffStrategy",
@@ -234,7 +253,6 @@ __all__ = [
     "get_metadata_cache",
     "get_stream_cache",
     "clear_all_caches",
-    # Research
     "collect_dataset",
     "collect_comment_corpus",
     "collect_transcript_corpus",
@@ -245,5 +263,3 @@ __all__ = [
     "comments_to_dataframe",
     "DatasetSummary",
 ]
-
-__version__ = "4.1.0"

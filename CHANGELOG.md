@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-08-19
+
+### Changed — Lightweight Package Optimization
+
+Major import optimization to make the package lightweight:
+
+- **Lazy imports in `__init__.py`**: `import media_data_extractor` now loads
+  only 7 core modules instead of 16. Heavy modules (player, pipeline, research,
+  downloader, export, sentiment, filters, performance) load on first attribute
+  access via `__getattr__`.
+- **New `core` module**: `from media_data_extractor.core import YouTubeScraper`
+  provides the absolute lightest import path — only scraping, no optional modules.
+- **Lazy selenium**: Selenium is not imported at package import time, only when
+  `YouTubeScraper.__enter__()` is called.
+- **Lazy downloader**: The downloader module is not imported by `client.py`
+  at module level — it loads only when `get_streams()` or
+  `download_video_file()` is called.
+- **Caching**: Lazy-loaded attributes are cached in module globals after first
+  access, so subsequent access has zero overhead.
+
+### Performance
+
+| Metric | Before (v4.1.0) | After (v4.2.0) |
+|--------|-----------------|----------------|
+| Modules loaded on `import` | 16 | 7 |
+| Selenium imported at import time | Yes | No (lazy) |
+| Downloader imported by client | Yes | No (lazy) |
+| `core` module available | No | Yes |
+
+### Added
+
+- `media_data_extractor.core` — lightweight core API module
+- 18 new lightweight import tests (521 total)
+
 ## [4.1.0] - 2026-08-18
 
 ### Added — Research Data Preparation Module
