@@ -720,6 +720,120 @@ for chunk in chunks:
     process(chunk)
 ```
 
+### Research Data Preparation (Fast Dataset Building)
+
+For researchers who need to prepare datasets quickly without writing boilerplate code, the `research` module provides one-call helpers that produce ready-to-analyze output:
+
+#### 1. Collect a Complete Dataset (one call → CSV)
+
+```python
+from media_data_extractor.research import collect_dataset
+
+# One call → CSV with metadata, engagement, and sentiment
+rows, summary = collect_dataset(
+    urls=["URL1", "URL2", "URL3"],
+    output_path="research_dataset.csv",
+    include_sentiment=True,       # Adds sentiment columns
+    include_comments=True,        # Also saves comments CSV
+    include_transcripts=True,     # Also saves transcripts file
+    max_comments=100,             # More comments for research
+)
+
+print(summary)
+# Dataset: 3/3 videos, 300 comments, 3 transcripts, 3 sentiments, 3 files, 45.2s
+
+# Convert to pandas DataFrame
+from media_data_extractor.research import to_dataframe
+df = to_dataframe(rows)
+print(df[["title", "views", "likes", "sentiment_label"]].head())
+```
+
+**Output columns:** `video_id, title, channel_name, views, likes, comment_count, dislikes, upload_date, duration_seconds, category, transcript_available, sentiment_label, sentiment_positive_pct, sentiment_negative_pct, sentiment_avg_compound, engagement_rate, ...`
+
+#### 2. Collect Comment Corpus for NLP
+
+```python
+from media_data_extractor.research import collect_comment_corpus
+
+# All comments from all videos in one CSV — ready for NLP
+comments, summary = collect_comment_corpus(
+    urls=["URL1", "URL2", "URL3"],
+    output_path="comment_corpus.csv",
+    max_comments=500,             # Collect up to 500 per video
+    include_sentiment=True,       # Per-comment sentiment label
+)
+
+# Convert to DataFrame for analysis
+df = to_dataframe(comments)
+print(df["sentiment_label"].value_counts())
+```
+
+#### 3. Collect Transcript Corpus for Text Analysis
+
+```python
+from media_data_extractor.research import collect_transcript_corpus
+
+# All transcripts in one file — for LDA, embeddings, discourse analysis
+transcripts, summary = collect_transcript_corpus(
+    urls=["URL1", "URL2", "URL3"],
+    output_path="transcripts.jsonl",
+    output_format="jsonl",        # or "txt" for plain text
+    include_metadata=True,        # Add title, channel, duration
+)
+```
+
+#### 4. Comparative Analysis Table
+
+```python
+from media_data_extractor.research import collect_comparison_table
+
+# Side-by-side comparison with engagement rates and sentiment
+rows, summary = collect_comparison_table(
+    urls=["URL1", "URL2", "URL3"],
+    output_path="comparison.csv",
+    include_sentiment=True,
+)
+
+# Columns: like_rate, comment_rate, engagement_rate, dislike_rate,
+#          sentiment_positive_pct, sentiment_avg_compound, ...
+```
+
+#### 5. Quick Scrape (single video, fastest)
+
+```python
+from media_data_extractor.research import quick_scrape
+
+# One call → flat dict with everything
+data = quick_scrape("VIDEO_ID")
+print(data["title"], data["views"], data["sentiment_label"])
+```
+
+#### 6. Pandas Integration
+
+```python
+from media_data_extractor.research import batch_to_dataframe, comments_to_dataframe
+from media_data_extractor import YouTubeScraper
+
+with YouTubeScraper() as scraper:
+    batch = scraper.batch_scrape(["URL1", "URL2"])
+
+# Direct to DataFrame
+df = batch_to_dataframe(batch, include_sentiment=True)
+comments_df = comments_to_dataframe(batch.results, include_sentiment=True)
+```
+
+#### Research Workflow Decision Tree
+
+| If you need... | Use this function |
+|----------------|-------------------|
+| Complete dataset with everything | `collect_dataset()` |
+| Comments for NLP/sentiment analysis | `collect_comment_corpus()` |
+| Transcripts for text analysis | `collect_transcript_corpus()` |
+| Compare videos side-by-side | `collect_comparison_table()` |
+| Quick data from one video | `quick_scrape()` |
+| Pandas DataFrame from batch | `batch_to_dataframe()` |
+| Full pipeline (scrape→filter→export→download) | `ScrapePipeline` |
+
 ## Sample Response
 
 Here is an example of the actual JSON output you get when scraping a real video. This was produced by running:

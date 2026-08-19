@@ -138,6 +138,17 @@ from .sentiment import (
     analyze_sentiment,
     analyze_video_sentiment,
 )
+from .research import (
+    DatasetSummary,
+    batch_to_dataframe,
+    collect_comment_corpus,
+    collect_comparison_table,
+    collect_dataset,
+    collect_transcript_corpus,
+    comments_to_dataframe,
+    quick_scrape,
+    to_dataframe,
+)
 
 __all__ = [
     "YouTubeScraper",
@@ -223,6 +234,16 @@ __all__ = [
     "get_metadata_cache",
     "get_stream_cache",
     "clear_all_caches",
+    # Research
+    "collect_dataset",
+    "collect_comment_corpus",
+    "collect_transcript_corpus",
+    "collect_comparison_table",
+    "quick_scrape",
+    "to_dataframe",
+    "batch_to_dataframe",
+    "comments_to_dataframe",
+    "DatasetSummary",
 ]
 
-__version__ = "4.0.1"
+__version__ = "4.1.0"

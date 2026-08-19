@@ -172,7 +172,7 @@ def full_batch():
 
 class TestPackageInit:
     def test_version_is_3_1_0(self):
-        assert media_data_extractor.__version__ == "4.0.1"
+        assert media_data_extractor.__version__ == "4.1.0"
 
     def test_all_exports_present(self):
         assert len(media_data_extractor.__all__) >= 60

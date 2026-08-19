@@ -44,12 +44,19 @@ from media_data_extractor import (
     BackoffStrategy,
     retry_with_backoff,
     chunk_list,
+    collect_dataset,
+    collect_comment_corpus,
+    collect_transcript_corpus,
+    collect_comparison_table,
+    quick_scrape,
+    to_dataframe,
+    DatasetSummary,
 )
 
 
 def test_version():
     assert hasattr(media_data_extractor, "__version__")
-    assert media_data_extractor.__version__ == "4.0.1"
+    assert media_data_extractor.__version__ == "4.1.0"
 
 
 def test_all_exports():
@@ -137,6 +144,16 @@ def test_all_exports():
         "get_metadata_cache",
         "get_stream_cache",
         "clear_all_caches",
+        # Research
+        "collect_dataset",
+        "collect_comment_corpus",
+        "collect_transcript_corpus",
+        "collect_comparison_table",
+        "quick_scrape",
+        "to_dataframe",
+        "batch_to_dataframe",
+        "comments_to_dataframe",
+        "DatasetSummary",
     }
     assert set(media_data_extractor.__all__) == expected
 

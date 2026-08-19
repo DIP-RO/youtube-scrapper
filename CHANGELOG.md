@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-08-18
+
+### Added — Research Data Preparation Module
+
+New `research.py` module with 6 high-level helpers for fast dataset building:
+
+- **`collect_dataset()`** — One call → CSV/JSONL with metadata, engagement, sentiment
+- **`collect_comment_corpus()`** — All comments from multiple videos in one CSV for NLP
+- **`collect_transcript_corpus()`** — All transcripts in one file for text analysis
+- **`collect_comparison_table()`** — Side-by-side comparison with engagement rates
+- **`quick_scrape()`** — Fastest way to get data from one video
+- **`to_dataframe()` / `batch_to_dataframe()` / `comments_to_dataframe()`** — Pandas integration
+
+Researchers can now prepare datasets in one function call instead of writing
+boilerplate scraping, filtering, sentiment, and export code.
+
+- New `research` optional dependency: `pip install media-data-extractor[research]`
+- 36 new tests (503 total)
+
 ## [4.0.0] - 2026-08-18
 
 ### Changed — Package rename (BREAKING)
