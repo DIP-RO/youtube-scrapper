@@ -159,7 +159,7 @@ def __dir__() -> list[str]:
     return sorted(list(globals().keys()) + list(_LAZY_EXPORTS.keys()))
 
 
-__version__ = "5.1.1"
+__version__ = "5.1.2"
 
 __all__ = [
     # Core (eagerly loaded)

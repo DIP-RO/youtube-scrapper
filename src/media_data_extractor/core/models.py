@@ -59,13 +59,19 @@ class Transcript:
 
 @dataclass(slots=True)
 class Comment:
-    """A single YouTube comment."""
+    """A single YouTube comment.
+
+    Only ``comment_id`` is required — all other fields have defaults
+    so you can create a Comment with minimal data::
+
+        c = Comment(comment_id="abc123", text="Great video!", author="Jane")
+    """
 
     comment_id: str | None
-    likes: int
-    reply_count: int
-    is_pinned: bool
-    is_hearted: bool
+    likes: int = 0
+    reply_count: int = 0
+    is_pinned: bool = False
+    is_hearted: bool = False
     author: str | None = None
     author_channel_id: str | None = None
     author_channel_url: str | None = None
