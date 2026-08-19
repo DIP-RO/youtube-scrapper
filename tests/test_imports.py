@@ -56,7 +56,7 @@ from media_data_extractor import (
 
 def test_version():
     assert hasattr(media_data_extractor, "__version__")
-    assert media_data_extractor.__version__ == "4.2.0"
+    assert media_data_extractor.__version__ == "5.0.0"
 
 
 def test_all_exports():

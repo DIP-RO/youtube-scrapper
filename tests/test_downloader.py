@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from media_data_extractor.downloader import (
+from media_data_extractor.platforms.youtube.downloader import (
     _extension_for_mime,
     _parse_format,
     download_stream,
@@ -24,7 +24,7 @@ from media_data_extractor.downloader import (
     select_by_quality,
     select_worst_progressive,
 )
-from media_data_extractor.models import DownloadResult, StreamFormat
+from media_data_extractor.core.models import DownloadResult, StreamFormat
 
 
 # ---------------------------------------------------------------------------
@@ -618,15 +618,15 @@ class TestFfmpeg:
         result = has_ffmpeg()
         assert isinstance(result, bool)
 
-    @patch("media_data_extractor.downloader.shutil.which", return_value=None)
+    @patch("media_data_extractor.platforms.youtube.downloader.shutil.which", return_value=None)
     def test_no_ffmpeg(self, _mock):
         assert has_ffmpeg() is False
 
-    @patch("media_data_extractor.downloader.shutil.which", return_value="/usr/bin/ffmpeg")
+    @patch("media_data_extractor.platforms.youtube.downloader.shutil.which", return_value="/usr/bin/ffmpeg")
     def test_has_ffmpeg(self, _mock):
         assert has_ffmpeg() is True
 
-    @patch("media_data_extractor.downloader.has_ffmpeg", return_value=False)
+    @patch("media_data_extractor.platforms.youtube.downloader.has_ffmpeg", return_value=False)
     def test_merge_without_ffmpeg(self, _mock, tmp_path):
         result = merge_audio_video(
             tmp_path / "video.mp4",
@@ -635,8 +635,8 @@ class TestFfmpeg:
         )
         assert result is False
 
-    @patch("media_data_extractor.downloader.has_ffmpeg", return_value=True)
-    @patch("media_data_extractor.downloader.subprocess.run")
+    @patch("media_data_extractor.platforms.youtube.downloader.has_ffmpeg", return_value=True)
+    @patch("media_data_extractor.platforms.youtube.downloader.subprocess.run")
     def test_merge_success(self, mock_run, _mock_ffmpeg, tmp_path):
         mock_run.return_value = MagicMock(returncode=0, stderr=b"", stdout=b"")
         # Create dummy files
@@ -650,8 +650,8 @@ class TestFfmpeg:
         assert result is True
         mock_run.assert_called_once()
 
-    @patch("media_data_extractor.downloader.has_ffmpeg", return_value=True)
-    @patch("media_data_extractor.downloader.subprocess.run")
+    @patch("media_data_extractor.platforms.youtube.downloader.has_ffmpeg", return_value=True)
+    @patch("media_data_extractor.platforms.youtube.downloader.subprocess.run")
     def test_merge_ffmpeg_failure(self, mock_run, _mock_ffmpeg, tmp_path):
         mock_run.return_value = MagicMock(returncode=1, stderr=b"error", stdout=b"")
         (tmp_path / "video.mp4").write_bytes(b"video")

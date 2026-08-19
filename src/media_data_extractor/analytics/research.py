@@ -53,8 +53,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .client import ScraperConfig, YouTubeScraper
-from .export import (
+from ..platforms.youtube.scraper import ScraperConfig, YouTubeScraper
+from ..exporters._all import (
     batch_comments_to_csv,
     batch_to_csv,
     batch_to_jsonl,
@@ -63,7 +63,7 @@ from .export import (
     video_to_csv,
 )
 from .filters import CommentFilter, filter_comments
-from .models import BatchResult, Comment, VideoResult
+from ..core.models import BatchResult, Comment, VideoResult
 from .sentiment import analyze_video_sentiment, VideoSentiment
 
 logger = logging.getLogger(__name__)

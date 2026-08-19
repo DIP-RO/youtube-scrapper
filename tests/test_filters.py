@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from media_data_extractor.filters import CommentFilter, filter_comments, search_comments, top_comments
-from media_data_extractor.models import (
+from media_data_extractor.analytics.filters import CommentFilter, filter_comments, search_comments, top_comments
+from media_data_extractor.core.models import (
     AccessStatus,
     Comment,
     Engagement,

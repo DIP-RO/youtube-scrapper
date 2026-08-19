@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from media_data_extractor.export import (
+from media_data_extractor.exporters._all import (
     _ms_to_srt_time,
     _rows_to_xlsx,
     batch_to_xlsx,
@@ -18,7 +18,7 @@ from media_data_extractor.export import (
     transcript_to_srt,
     video_to_xlsx,
 )
-from media_data_extractor.models import (
+from media_data_extractor.core.models import (
     AccessStatus,
     BatchError,
     BatchResult,

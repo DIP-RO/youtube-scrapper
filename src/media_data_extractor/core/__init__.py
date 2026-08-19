@@ -1,25 +1,17 @@
-"""Lightweight core API — scraping only, no optional dependencies.
+"""Core platform-agnostic models, exceptions, and base classes.
 
-This module provides the absolute minimum imports for YouTube scraping.
-Use it when you want the fastest possible import and don't need
-downloads, player, pipeline, sentiment, or research helpers.
+This module contains the universal data models and exceptions shared
+across all platform implementations (YouTube, TikTok, etc.).
 
-Example::
+Import from here::
 
+    from media_data_extractor.core import VideoResult, Comment, ScraperError
+    # Backward compat: also exports YouTubeScraper
     from media_data_extractor.core import YouTubeScraper, ScraperConfig
-
-    with YouTubeScraper() as scraper:
-        result = scraper.get_video("VIDEO_ID")
-        print(result.metadata.title)
-
-This imports only: models, exceptions, parsing, utils, scraper, client.
-No selenium at import time (loaded lazily in __enter__).
-No downloader, export, sentiment, filters, player, pipeline, research.
 """
 
 from __future__ import annotations
 
-from .client import ScraperConfig, YouTubeScraper
 from .exceptions import (
     AccessBlockedException,
     BrowserNotInitializedError,
@@ -34,14 +26,19 @@ from .models import (
     BatchResult,
     Comment,
     DislikeData,
+    DownloadResult,
     Engagement,
     NetworkInfo,
+    StreamFormat,
     Summary,
     Transcript,
     TranscriptSegment,
     VideoMetadata,
     VideoResult,
 )
+# Backward compatibility: re-export YouTubeScraper from core
+# (was available in v4.2.0 as from media_data_extractor.core import YouTubeScraper)
+from ..platforms.youtube.scraper import ScraperConfig, YouTubeScraper
 
 __all__ = [
     "YouTubeScraper",
@@ -64,4 +61,6 @@ __all__ = [
     "NetworkInfo",
     "BatchResult",
     "BatchError",
+    "StreamFormat",
+    "DownloadResult",
 ]

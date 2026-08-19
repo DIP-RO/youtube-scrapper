@@ -17,9 +17,9 @@ import json
 import sys
 from pathlib import Path
 
-from .client import ScraperConfig, YouTubeScraper
-from .exceptions import ScraperError
-from .export import download_batch, download_video, export_batch, export_video
+from ..platforms.youtube.scraper import ScraperConfig, YouTubeScraper
+from ..core.exceptions import ScraperError
+from ..exporters._all import download_batch, download_video, export_batch, export_video
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -370,7 +370,7 @@ def _format_bytes(size: int) -> str:
 
 def _run_download_command(args: argparse.Namespace) -> int:
     """Execute the ``download`` subcommand."""
-    from .downloader import has_ffmpeg
+    from ..platforms.youtube.downloader import has_ffmpeg
 
     config = ScraperConfig(
         headless=not args.no_headless,
@@ -435,7 +435,7 @@ def _run_download_command(args: argparse.Namespace) -> int:
 
 def _run_player_command(args: argparse.Namespace) -> int:
     """Execute the ``player`` subcommand."""
-    from .player import (
+    from ..media.player import (
         Playlist,
         Track,
         VideoPlayer,
@@ -505,7 +505,7 @@ def _run_player_command(args: argparse.Namespace) -> int:
 
 def _run_pipeline_command(args: argparse.Namespace) -> int:
     """Execute the ``pipeline`` subcommand."""
-    from .pipeline import ScrapePipeline
+    from ..media.pipeline import ScrapePipeline
 
     # Collect URLs
     urls: list[str] = list(args.urls) if args.urls else []

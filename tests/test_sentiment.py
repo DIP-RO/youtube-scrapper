@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from media_data_extractor.models import (
+from media_data_extractor.core.models import (
     AccessStatus,
     Comment,
     Engagement,
@@ -14,7 +14,7 @@ from media_data_extractor.models import (
     VideoMetadata,
     VideoResult,
 )
-from media_data_extractor.sentiment import (
+from media_data_extractor.analytics.sentiment import (
     CommentSentiment,
     SentimentResult,
     VideoSentiment,

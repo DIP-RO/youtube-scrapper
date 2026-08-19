@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from media_data_extractor.player import (
+from media_data_extractor.media.player import (
     Playlist,
     Track,
     VideoPlayer,

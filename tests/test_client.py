@@ -1,4 +1,4 @@
-"""Tests for the YouTubeScraper client in media_data_extractor.client.
+"""Tests for the YouTubeScraper client in media_data_extractor.platforms.youtube.scraper.
 
 The Selenium driver and HTTP session are fully mocked — no browser or
 live network requests are involved.
@@ -12,13 +12,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from media_data_extractor.client import ScraperConfig, YouTubeScraper
-from media_data_extractor.exceptions import (
+from media_data_extractor.platforms.youtube.scraper import ScraperConfig, YouTubeScraper
+from media_data_extractor.core.exceptions import (
     BrowserNotInitializedError,
     InvalidVideoURLError,
     SeleniumNotInstalledError,
 )
-from media_data_extractor.models import VideoResult
+from media_data_extractor.core.models import VideoResult
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ class TestYouTubeScraperInit:
 # ---------------------------------------------------------------------------
 
 class TestContextManager:
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_enter_builds_driver(self, mock_build):
         mock_build.return_value = MagicMock()
         scraper = YouTubeScraper()
@@ -172,7 +172,7 @@ class TestContextManager:
             assert s.driver is not None
         assert scraper.driver is None
 
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_exit_quits_driver(self, mock_build):
         mock_driver = MagicMock()
         mock_build.return_value = mock_driver
@@ -227,7 +227,7 @@ class TestSeleniumNotInstalled:
 # ---------------------------------------------------------------------------
 
 class TestGetVideoFullFlow:
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_successful_scrape(self, mock_build):
         mock_driver = _make_mock_driver()
         mock_build.return_value = mock_driver
@@ -254,7 +254,7 @@ class TestGetVideoFullFlow:
         assert result.network.bot_evasion is False
         assert result.network.access_status.blocked is False
 
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_to_dict_serializable(self, mock_build):
         mock_driver = _make_mock_driver()
         mock_build.return_value = mock_driver
@@ -270,7 +270,7 @@ class TestGetVideoFullFlow:
         json.dumps(d)
         assert d["video_id"] == "dQw4w9WgXcQ"
 
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_accepts_full_url(self, mock_build):
         mock_driver = _make_mock_driver()
         mock_build.return_value = mock_driver
@@ -283,7 +283,7 @@ class TestGetVideoFullFlow:
 
         assert result.video_id == "dQw4w9WgXcQ"
 
-    @patch("media_data_extractor.client.YouTubeScraper._build_driver")
+    @patch("media_data_extractor.platforms.youtube.scraper.YouTubeScraper._build_driver")
     def test_accepts_youtu_be_url(self, mock_build):
         mock_driver = _make_mock_driver()
         mock_build.return_value = mock_driver
@@ -302,13 +302,13 @@ class TestGetVideoFullFlow:
 # ---------------------------------------------------------------------------
 
 class TestPoliteSleep:
-    @patch("media_data_extractor.client.time.sleep")
+    @patch("media_data_extractor.platforms.youtube.scraper.time.sleep")
     def test_no_sleep_when_delay_zero(self, mock_sleep):
         scraper = YouTubeScraper(ScraperConfig(request_delay=0))
         scraper._polite_sleep()
         mock_sleep.assert_not_called()
 
-    @patch("media_data_extractor.client.time.sleep")
+    @patch("media_data_extractor.platforms.youtube.scraper.time.sleep")
     def test_sleeps_with_jitter(self, mock_sleep):
         scraper = YouTubeScraper(ScraperConfig(request_delay=1.0))
         scraper._polite_sleep()

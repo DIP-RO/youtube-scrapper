@@ -1,4 +1,4 @@
-"""Tests for batch scraping functionality in media_data_extractor.client.
+"""Tests for batch scraping functionality in media_data_extractor.platforms.youtube.scraper.
 
 All browser and HTTP calls are mocked — no live requests.
 """
@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from media_data_extractor.client import ScraperConfig, YouTubeScraper
-from media_data_extractor.exceptions import InvalidVideoURLError
-from media_data_extractor.models import (
+from media_data_extractor.platforms.youtube.scraper import ScraperConfig, YouTubeScraper
+from media_data_extractor.core.exceptions import InvalidVideoURLError
+from media_data_extractor.core.models import (
     BatchResult,
     BatchError,
     VideoResult,

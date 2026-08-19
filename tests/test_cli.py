@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from media_data_extractor.cli import build_parser, main
-from media_data_extractor.exceptions import InvalidVideoURLError, ScraperError
+from media_data_extractor.core.exceptions import InvalidVideoURLError, ScraperError
 
 
 class TestBuildParser:
@@ -47,7 +47,7 @@ class TestBuildParser:
 
 
 class TestMain:
-    @patch("media_data_extractor.cli.YouTubeScraper")
+    @patch("media_data_extractor.cli.main.YouTubeScraper")
     def test_video_command_outputs_json(self, mock_scraper_cls):
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"video_id": "test", "metadata": {"title": "Test"}}
@@ -63,7 +63,7 @@ class TestMain:
         mock_scraper.get_video.assert_called_once_with("dQw4w9WgXcQ")
         mock_print.assert_called_once()
 
-    @patch("media_data_extractor.cli.YouTubeScraper")
+    @patch("media_data_extractor.cli.main.YouTubeScraper")
     def test_video_command_writes_to_file(self, mock_scraper_cls, tmp_path):
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"video_id": "test"}
@@ -80,7 +80,7 @@ class TestMain:
         data = json.loads(out_file.read_text())
         assert data["video_id"] == "test"
 
-    @patch("media_data_extractor.cli.YouTubeScraper")
+    @patch("media_data_extractor.cli.main.YouTubeScraper")
     def test_scraper_error_returns_1(self, mock_scraper_cls):
         mock_scraper = MagicMock()
         mock_scraper.__enter__.return_value = mock_scraper
@@ -92,7 +92,7 @@ class TestMain:
 
         assert exit_code == 1
 
-    @patch("media_data_extractor.cli.YouTubeScraper")
+    @patch("media_data_extractor.cli.main.YouTubeScraper")
     def test_pretty_flag(self, mock_scraper_cls):
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"video_id": "test"}

@@ -25,14 +25,14 @@ from typing import Any
 
 import requests
 
-from .exceptions import (
+from ...core.exceptions import (
     AccessBlockedException,
     BrowserNotInitializedError,
     InvalidVideoURLError,
     ScraperError,
     SeleniumNotInstalledError,
 )
-from .models import (
+from ...core.models import (
     AccessStatus,
     BatchError,
     BatchResult,
@@ -47,18 +47,17 @@ from .models import (
     VideoMetadata,
     VideoResult,
 )
-from .parsing import (
+from .parser import (
     extract_api_key,
     extract_innertube_context,
     extract_json_assignment,
     extract_ytcfg,
     parse_metadata,
 )
-from .scraper import fetch_comment_data, fetch_dislikes, fetch_transcript
-from .utils import detect_access_block, extract_video_id, find_all_keys, find_key, int_or_none, summarize_text
+from .fetcher import fetch_comment_data, fetch_dislikes, fetch_transcript
+from ...utils.helpers import detect_access_block, extract_video_id, find_all_keys, find_key, int_or_none, summarize_text
 
 # Lazy import — downloader is only needed for download_video_file and get_streams
-# This keeps client.py lightweight when only scraping is needed.
 def _get_downloader():
     """Lazily import the downloader module."""
     from . import downloader
@@ -858,7 +857,7 @@ class YouTubeScraper:
     @staticmethod
     def _deserialize_result(data: dict) -> VideoResult:
         """Reconstruct a VideoResult from a checkpoint dict (best-effort)."""
-        from .models import (
+        from ...core.models import (
             AccessStatus,
             DislikeData,
             Engagement,

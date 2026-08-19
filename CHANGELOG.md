@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-08-19
+
+### Changed — Industry-Standard Platform-Based Architecture
+
+Major restructure to support multiple social media platforms in the future.
+The package now uses a clean, extensible directory structure:
+
+```
+media_data_extractor/
+├── core/          # Platform-agnostic models, exceptions
+├── platforms/     # Platform implementations
+│   └── youtube/   # YouTube scraper, parser, downloader
+├── exporters/     # CSV, JSON, JSONL, XLSX, SRT, TXT
+├── analytics/     # Sentiment, filters, research helpers
+├── media/         # Video player, pipeline orchestration
+├── utils/         # Performance utilities, helpers
+└── cli/           # Command-line interface
+```
+
+### Backward Compatibility
+
+All existing imports continue to work unchanged:
+
+```python
+from media_data_extractor import YouTubeScraper, ScraperConfig  # ✓
+from media_data_extractor.core import YouTubeScraper            # ✓
+import media_data_extractor                                      # ✓
+```
+
+### New Import Paths (optional)
+
+```python
+# Platform-specific
+from media_data_extractor.platforms.youtube import YouTubeScraper
+
+# By concern
+from media_data_extractor.core import VideoResult, Comment
+from media_data_extractor.exporters import export_video
+from media_data_extractor.analytics import analyze_sentiment, collect_dataset
+from media_data_extractor.media import VideoPlayer, ScrapePipeline
+from media_data_extractor.utils import LRUCache, extract_video_id
+```
+
+### File Mapping
+
+| Old Location | New Location |
+|-------------|-------------|
+| `models.py` | `core/models.py` |
+| `exceptions.py` | `core/exceptions.py` |
+| `client.py` | `platforms/youtube/scraper.py` |
+| `parsing.py` | `platforms/youtube/parser.py` |
+| `scraper.py` | `platforms/youtube/fetcher.py` |
+| `downloader.py` | `platforms/youtube/downloader.py` |
+| `export.py` | `exporters/_all.py` |
+| `sentiment.py` | `analytics/sentiment.py` |
+| `filters.py` | `analytics/filters.py` |
+| `research.py` | `analytics/research.py` |
+| `player.py` | `media/player.py` |
+| `pipeline.py` | `media/pipeline.py` |
+| `performance.py` | `utils/performance.py` |
+| `utils.py` | `utils/helpers.py` |
+| `cli.py` | `cli/main.py` |
+
+### Benefits for Future Development
+
+- Add a new platform (e.g., TikTok) by creating `platforms/tiktok/` — no changes to core
+- Clear separation of concerns: models, platform logic, export, analytics
+- Each module can be tested and maintained independently
+- Industry-standard structure familiar to open-source contributors
+
+521 tests passing, full backward compatibility maintained.
+
 ## [4.2.0] - 2026-08-19
 
 ### Changed — Lightweight Package Optimization

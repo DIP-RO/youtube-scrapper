@@ -42,10 +42,10 @@ class TestLightweightImports:
         from media_data_extractor.core import YouTubeScraper
 
         loaded = [m for m in sys.modules if "media_data_extractor" in m]
-        heavy = {"media_data_extractor.downloader", "media_data_extractor.export",
-                 "media_data_extractor.sentiment", "media_data_extractor.filters",
-                 "media_data_extractor.player", "media_data_extractor.pipeline",
-                 "media_data_extractor.research", "media_data_extractor.performance"}
+        heavy = {"media_data_extractor.platforms.youtube.downloader", "media_data_extractor.exporters._all",
+                 "media_data_extractor.analytics.sentiment", "media_data_extractor.analytics.filters",
+                 "media_data_extractor.media.player", "media_data_extractor.media.pipeline",
+                 "media_data_extractor.analytics.research", "media_data_extractor.utils.performance"}
         assert not heavy.intersection(loaded), f"Heavy modules loaded: {heavy.intersection(loaded)}"
 
     def test_init_import_is_lightweight(self):
@@ -54,10 +54,10 @@ class TestLightweightImports:
         import media_data_extractor
 
         loaded = [m for m in sys.modules if "media_data_extractor" in m]
-        heavy = {"media_data_extractor.downloader", "media_data_extractor.export",
-                 "media_data_extractor.sentiment", "media_data_extractor.filters",
-                 "media_data_extractor.player", "media_data_extractor.pipeline",
-                 "media_data_extractor.research", "media_data_extractor.performance"}
+        heavy = {"media_data_extractor.platforms.youtube.downloader", "media_data_extractor.exporters._all",
+                 "media_data_extractor.analytics.sentiment", "media_data_extractor.analytics.filters",
+                 "media_data_extractor.media.player", "media_data_extractor.media.pipeline",
+                 "media_data_extractor.analytics.research", "media_data_extractor.utils.performance"}
         assert not heavy.intersection(loaded), f"Heavy modules loaded: {heavy.intersection(loaded)}"
 
     def test_lazy_load_on_access(self):
@@ -65,9 +65,9 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.player" not in sys.modules
+        assert "media_data_extractor.media.player" not in sys.modules
         player = media_data_extractor.VideoPlayer
-        assert "media_data_extractor.player" in sys.modules
+        assert "media_data_extractor.media.player" in sys.modules
         assert player is not None
 
     def test_lazy_load_caches_in_globals(self):
@@ -84,9 +84,9 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.research" not in sys.modules
+        assert "media_data_extractor.analytics.research" not in sys.modules
         func = media_data_extractor.collect_dataset
-        assert "media_data_extractor.research" in sys.modules
+        assert "media_data_extractor.analytics.research" in sys.modules
         assert callable(func)
 
     def test_lazy_load_downloader(self):
@@ -94,9 +94,9 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.downloader" not in sys.modules
+        assert "media_data_extractor.platforms.youtube.downloader" not in sys.modules
         func = media_data_extractor.extract_streams
-        assert "media_data_extractor.downloader" in sys.modules
+        assert "media_data_extractor.platforms.youtube.downloader" in sys.modules
         assert callable(func)
 
     def test_lazy_load_sentiment(self):
@@ -104,9 +104,9 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.sentiment" not in sys.modules
+        assert "media_data_extractor.analytics.sentiment" not in sys.modules
         func = media_data_extractor.analyze_sentiment
-        assert "media_data_extractor.sentiment" in sys.modules
+        assert "media_data_extractor.analytics.sentiment" in sys.modules
         assert callable(func)
 
     def test_lazy_load_export(self):
@@ -114,9 +114,9 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.export" not in sys.modules
+        assert "media_data_extractor.exporters._all" not in sys.modules
         func = media_data_extractor.export_video
-        assert "media_data_extractor.export" in sys.modules
+        assert "media_data_extractor.exporters._all" in sys.modules
         assert callable(func)
 
     def test_lazy_load_performance(self):
@@ -124,27 +124,27 @@ class TestLightweightImports:
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.performance" not in sys.modules
+        assert "media_data_extractor.utils.performance" not in sys.modules
         cls = media_data_extractor.LRUCache
-        assert "media_data_extractor.performance" in sys.modules
+        assert "media_data_extractor.utils.performance" in sys.modules
 
     def test_lazy_load_pipeline(self):
         """Pipeline module should load lazily."""
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.pipeline" not in sys.modules
+        assert "media_data_extractor.media.pipeline" not in sys.modules
         cls = media_data_extractor.ScrapePipeline
-        assert "media_data_extractor.pipeline" in sys.modules
+        assert "media_data_extractor.media.pipeline" in sys.modules
 
     def test_lazy_load_filters(self):
         """Filters module should load lazily."""
         self._clear_package()
         import media_data_extractor
 
-        assert "media_data_extractor.filters" not in sys.modules
+        assert "media_data_extractor.analytics.filters" not in sys.modules
         cls = media_data_extractor.CommentFilter
-        assert "media_data_extractor.filters" in sys.modules
+        assert "media_data_extractor.analytics.filters" in sys.modules
 
     def test_dir_includes_lazy_exports(self):
         """__dir__() should include all lazy exports for tab-completion."""

@@ -27,7 +27,7 @@ from typing import Any
 
 import requests
 
-from .models import DownloadResult, StreamFormat
+from ...core.models import DownloadResult, StreamFormat
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,4 @@
-"""Tests for network fetching functions in media_data_extractor.scraper.
+"""Tests for network fetching functions in media_data_extractor.platforms.youtube.fetcher.
 
 All HTTP calls are mocked — no live YouTube requests are made.
 """
@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from media_data_extractor.models import Comment, DislikeData, Transcript
-from media_data_extractor.scraper import (
+from media_data_extractor.core.models import Comment, DislikeData, Transcript
+from media_data_extractor.platforms.youtube.fetcher import (
     RYD_API,
     YOUTUBEI_BASE,
     fetch_comment_data,

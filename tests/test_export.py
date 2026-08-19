@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from media_data_extractor.export import (
+from media_data_extractor.exporters._all import (
     batch_comments_to_csv,
     batch_to_csv,
     batch_to_jsonl,
@@ -19,7 +19,7 @@ from media_data_extractor.export import (
     video_to_csv,
     video_to_jsonl,
 )
-from media_data_extractor.models import (
+from media_data_extractor.core.models import (
     AccessStatus,
     BatchError,
     BatchResult,

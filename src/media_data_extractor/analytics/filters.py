@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .models import Comment, VideoResult
+from ..core.models import Comment, VideoResult
 from .sentiment import analyze_comment_sentiment
 
 

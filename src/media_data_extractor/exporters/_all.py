@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .models import BatchResult, VideoResult
+from ..core.models import BatchResult, VideoResult
 
 
 # ---------------------------------------------------------------------------

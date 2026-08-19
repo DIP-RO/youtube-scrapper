@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from media_data_extractor.performance import (
+from media_data_extractor.utils.performance import (
     BackoffStrategy,
     LRUCache,
     RateLimiter,

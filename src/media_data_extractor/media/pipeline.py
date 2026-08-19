@@ -30,11 +30,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .client import ScraperConfig, YouTubeScraper
-from .export import download_batch, download_video, export_batch, export_video
-from .filters import CommentFilter, filter_comments
-from .models import BatchResult, DownloadResult, VideoResult
-from .sentiment import analyze_video_sentiment, VideoSentiment
+from ..platforms.youtube.scraper import ScraperConfig, YouTubeScraper
+from ..exporters._all import download_batch, download_video, export_batch, export_video
+from ..analytics.filters import CommentFilter, filter_comments
+from ..core.models import BatchResult, DownloadResult, VideoResult
+from ..analytics.sentiment import analyze_video_sentiment, VideoSentiment
 
 logger = logging.getLogger(__name__)
 

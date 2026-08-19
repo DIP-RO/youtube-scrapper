@@ -1,10 +1,10 @@
-"""Tests for data models in media_data_extractor.models."""
+"""Tests for data models in media_data_extractor.core.models."""
 
 from __future__ import annotations
 
 import json
 
-from media_data_extractor.models import (
+from media_data_extractor.core.models import (
     AccessStatus,
     Comment,
     DislikeData,

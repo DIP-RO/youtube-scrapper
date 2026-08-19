@@ -14,8 +14,8 @@ from urllib.parse import quote
 
 import requests
 
-from .models import Comment, DislikeData, Transcript, TranscriptSegment
-from .parsing import (
+from ...core.models import Comment, DislikeData, Transcript, TranscriptSegment
+from .parser import (
     choose_caption_track,
     find_comment_continuation,
     find_comment_count,
@@ -24,7 +24,7 @@ from .parsing import (
     parse_comment_entity,
     parse_panel_transcript_segments,
 )
-from .utils import find_all_keys, int_or_none, text_from
+from ...utils.helpers import find_all_keys, int_or_none, text_from
 
 logger = logging.getLogger(__name__)
 

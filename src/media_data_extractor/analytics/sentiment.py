@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .models import Comment, VideoResult
+from ..core.models import Comment, VideoResult
 
 
 # ---------------------------------------------------------------------------

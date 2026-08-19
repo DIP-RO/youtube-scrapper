@@ -1,10 +1,10 @@
-"""Tests for pure utility functions in media_data_extractor.utils."""
+"""Tests for pure utility functions in media_data_extractor.utils.helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from media_data_extractor.utils import (
+from media_data_extractor.utils.helpers import (
     detect_access_block,
     duration_from_bounds,
     extract_video_id,

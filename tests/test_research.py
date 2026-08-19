@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from media_data_extractor.models import (
+from media_data_extractor.core.models import (
     AccessStatus,
     BatchResult,
     Comment,
@@ -20,7 +20,7 @@ from media_data_extractor.models import (
     VideoMetadata,
     VideoResult,
 )
-from media_data_extractor.research import (
+from media_data_extractor.analytics.research import (
     DatasetSummary,
     _sentiment_to_row,
     _sentiment_to_row_empty,
@@ -131,7 +131,7 @@ class TestVideoToResearchRow:
 # ---------------------------------------------------------------------------
 
 class TestCollectDataset:
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_basic_collection(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -149,7 +149,7 @@ class TestCollectDataset:
         assert summary.total_videos == 2
         assert (tmp_path / "dataset.csv").exists()
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_sentiment(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -166,7 +166,7 @@ class TestCollectDataset:
         assert "sentiment_positive_pct" in rows[0]
         assert summary.sentiment_available == 2
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_comments_export(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -183,7 +183,7 @@ class TestCollectDataset:
         assert (tmp_path / "dataset_comments.csv").exists()
         assert len(summary.output_files) >= 2
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_transcripts_export(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -199,7 +199,7 @@ class TestCollectDataset:
 
         assert (tmp_path / "dataset_transcripts.txt").exists()
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_jsonl_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -218,7 +218,7 @@ class TestCollectDataset:
         assert len(lines) == 2
         json.loads(lines[0])  # Valid JSON
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_json_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -235,7 +235,7 @@ class TestCollectDataset:
         data = json.loads((tmp_path / "dataset.json").read_text())
         assert len(data) == 2
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_empty_urls(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -253,7 +253,7 @@ class TestCollectDataset:
 # ---------------------------------------------------------------------------
 
 class TestCollectCommentCorpus:
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_basic_collection(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -268,7 +268,7 @@ class TestCollectCommentCorpus:
         assert "video_id" in comments[0]
         assert "text" in comments[0]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_sentiment(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -284,7 +284,7 @@ class TestCollectCommentCorpus:
         assert "sentiment_label" in comments[0]
         assert "sentiment_compound" in comments[0]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_csv_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -308,7 +308,7 @@ class TestCollectCommentCorpus:
 # ---------------------------------------------------------------------------
 
 class TestCollectTranscriptCorpus:
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_basic_collection(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -323,7 +323,7 @@ class TestCollectTranscriptCorpus:
         assert "transcript" in transcripts[0]
         assert "segments" in transcripts[0]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_metadata(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -340,7 +340,7 @@ class TestCollectTranscriptCorpus:
         assert "channel" in transcripts[0]
         assert "duration_seconds" in transcripts[0]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_jsonl_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -358,7 +358,7 @@ class TestCollectTranscriptCorpus:
         lines = content.strip().split("\n")
         assert len(lines) == 2
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_txt_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -381,7 +381,7 @@ class TestCollectTranscriptCorpus:
 # ---------------------------------------------------------------------------
 
 class TestCollectComparisonTable:
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_basic_comparison(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -396,7 +396,7 @@ class TestCollectComparisonTable:
         assert "comment_rate" in rows[0]
         assert "engagement_rate" in rows[0]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_sorted_by_views(self, mock_scraper_class):
         batch = _make_batch(3)
         batch.results[0].metadata.views = 100
@@ -413,7 +413,7 @@ class TestCollectComparisonTable:
 
         assert rows[0]["views"] >= rows[1]["views"] >= rows[2]["views"]
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_sentiment(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -430,7 +430,7 @@ class TestCollectComparisonTable:
         assert "sentiment_avg_compound" in rows[0]
         assert summary.sentiment_available == 2
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_csv_output(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -447,7 +447,7 @@ class TestCollectComparisonTable:
         assert "engagement_rate" in content
         assert "like_rate" in content
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_engagement_rate_calculation(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -469,7 +469,7 @@ class TestCollectComparisonTable:
 # ---------------------------------------------------------------------------
 
 class TestQuickScrape:
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_basic_quick_scrape(self, mock_scraper_class):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -484,7 +484,7 @@ class TestQuickScrape:
         assert data["views"] == 100000
         assert "sentiment_label" in data
 
-    @patch("media_data_extractor.research.YouTubeScraper")
+    @patch("media_data_extractor.analytics.research.YouTubeScraper")
     def test_with_output_files(self, mock_scraper_class, tmp_path):
         mock_scraper = MagicMock()
         mock_scraper.__enter__ = MagicMock(return_value=mock_scraper)
@@ -573,7 +573,7 @@ class TestDatasetSummary:
 
 class TestSentimentHelpers:
     def test_sentiment_to_row(self):
-        from media_data_extractor.sentiment import VideoSentiment
+        from media_data_extractor.analytics.sentiment import VideoSentiment
         sentiment = VideoSentiment(
             video_id="v1",
             total_comments=10,

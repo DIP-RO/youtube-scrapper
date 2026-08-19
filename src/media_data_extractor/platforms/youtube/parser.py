@@ -14,8 +14,8 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from typing import Any
 
-from .models import Comment, TranscriptSegment
-from .utils import (
+from ...core.models import Comment, TranscriptSegment
+from ...utils.helpers import (
     duration_from_bounds,
     find_all_keys,
     find_key,
