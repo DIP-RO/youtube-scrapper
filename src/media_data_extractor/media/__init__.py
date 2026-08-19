@@ -8,6 +8,7 @@ Import from here::
 from __future__ import annotations
 
 from .pipeline import (
+    PipelineConfig,
     PipelineResult,
     PipelineStageResult,
     ScrapePipeline,
@@ -34,6 +35,7 @@ __all__ = [
     "find_player_backend",
     "has_ffplay",
     "ScrapePipeline",
+    "PipelineConfig",
     "PipelineResult",
     "PipelineStageResult",
     "VALID_STAGES",

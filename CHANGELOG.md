@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-08-19
+
+### Fixed — API Inconsistencies from User Testing
+
+- **LRUCache**: Added `set()` as alias for `put()` (users naturally try `cache.set()`)
+- **LRUCache**: Added dict-style access: `cache[key]`, `cache[key] = val`, `key in cache`, `len(cache)`
+- **LRUCache**: Added `default` parameter to `get(key, default=None)`
+- **LRUCache**: Added `__repr__` for readable debug output
+- **CommentFilter**: Added `min_text_length` parameter (filters short/spam comments)
+- **SRT export**: Now produces a single SRT entry when transcript has text but no timed segments
+- **NetworkRequestError**: Now exported in public API (was missing)
+
+### Added — User-Friendly Features
+
+- **PipelineConfig**: New convenience dataclass for configuring ScrapePipeline
+  without remembering positional argument order
+- **ScrapePipeline.from_config()**: Create pipeline from PipelineConfig object
+- **YouTubeScraper.scrape()**: Alias for `get_video()` (more intuitive name)
+- **YouTubeScraper.download()**: Alias for `download_video_file()` (shorter name)
+- **Exception docstrings**: All exceptions now include helpful examples and fix suggestions
+
+### Improved — Documentation
+
+- `get_video()` docstring now includes a complete usage example
+- `BrowserNotInitializedError` shows the correct `with` statement pattern
+- `InvalidVideoURLError` lists valid URL formats
+- `SeleniumNotInstalledError` shows the `pip install` fix
+- `AccessBlockedException` documents that the scraper does NOT bypass protections
+
+### Tests
+
+- 534 tests (was 521, +13 new tests)
+- New tests: LRUCache dict-style API (8), CommentFilter min_text_length (1), PipelineConfig (4)
+
 ## [5.0.0] - 2026-08-19
 
 ### Changed — Industry-Standard Platform-Based Architecture

@@ -21,6 +21,7 @@ from media_data_extractor.core.models import (
     VideoResult,
 )
 from media_data_extractor.media.pipeline import (
+    PipelineConfig,
     PipelineResult,
     PipelineStageResult,
     ScrapePipeline,
@@ -261,3 +262,48 @@ class TestPipelineRun:
         assert d["succeeded"] == 5
         assert d["failed"] == 2
         assert d["elapsed_seconds"] == 10.5
+
+
+class TestPipelineConfig:
+    """Tests for the PipelineConfig convenience dataclass."""
+
+    def test_default_config(self):
+        config = PipelineConfig()
+        assert config.stages is None
+        assert config.export_format == "json"
+        assert config.max_comments == 25
+        assert config.max_workers == 3
+        assert config.headless is True
+        assert config.video_quality == "best"
+
+    def test_custom_config(self):
+        config = PipelineConfig(
+            stages=["scrape", "sentiment", "export"],
+            export_format="csv",
+            max_comments=100,
+            max_workers=4,
+            video_quality="720p",
+        )
+        assert config.stages == ["scrape", "sentiment", "export"]
+        assert config.export_format == "csv"
+        assert config.max_comments == 100
+        assert config.max_workers == 4
+        assert config.video_quality == "720p"
+
+    def test_from_config_creates_pipeline(self):
+        config = PipelineConfig(
+            stages=["scrape", "export"],
+            export_format="json",
+            max_comments=50,
+        )
+        pipeline = ScrapePipeline.from_config(config)
+        assert pipeline.stages == ["scrape", "export"]
+        assert pipeline.export_format == "json"
+        assert pipeline.config.max_comments == 50
+
+    def test_from_config_defaults(self):
+        config = PipelineConfig()
+        pipeline = ScrapePipeline.from_config(config)
+        # Default stages
+        assert "scrape" in pipeline.stages
+        assert pipeline.config.headless is True

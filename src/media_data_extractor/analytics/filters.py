@@ -26,18 +26,30 @@ class CommentFilter:
         author: Case-insensitive substring to match against author name.
         min_likes: Minimum number of likes a comment must have.
         max_likes: Maximum number of likes a comment must have.
+        min_text_length: Minimum length of comment text (filters out short/spam comments).
         date_from: ISO date string (e.g. "2024-01-01") — comments on or after this date.
         date_to: ISO date string (e.g. "2024-12-31") — comments on or before this date.
         sentiment: Filter by sentiment label: "positive", "negative", or "neutral".
         is_reply: If True, only return replies. If False, only top-level comments.
             If None, return all.
         regex: Regular expression pattern to match against comment text.
+
+    Example::
+
+        # Filter for high-quality positive comments
+        f = CommentFilter(
+            min_likes=10,
+            min_text_length=20,
+            sentiment="positive",
+        )
+        filtered = filter_comments(result, filter=f)
     """
 
     keyword: str | None = None
     author: str | None = None
     min_likes: int | None = None
     max_likes: int | None = None
+    min_text_length: int | None = None
     date_from: str | None = None
     date_to: str | None = None
     sentiment: str | None = None
@@ -61,6 +73,11 @@ class CommentFilter:
         if self.min_likes is not None and comment_likes < self.min_likes:
             return False
         if self.max_likes is not None and comment_likes > self.max_likes:
+            return False
+
+        # Text length filter
+        text_len = len(comment.text or "")
+        if self.min_text_length is not None and text_len < self.min_text_length:
             return False
 
         # Date range filter (uses 'published' field)

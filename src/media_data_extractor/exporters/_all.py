@@ -360,11 +360,22 @@ def transcript_to_srt(result: VideoResult) -> str:
     """Convert a VideoResult's transcript to SRT subtitle format.
 
     Format: index, timestamp range, text — standard SRT.
+
+    If the transcript has no timed segments but has plain text,
+    produces a single SRT entry with the full text.
     """
     if not result.transcript.available:
         return ""
     lines: list[str] = []
-    for i, seg in enumerate(result.transcript.segments, 1):
+    segments = result.transcript.segments
+    if not segments and result.transcript.text:
+        # No timed segments — produce a single entry with the full text
+        lines.append("1")
+        lines.append("00:00:00,000 --> 00:00:02,000")
+        lines.append(result.transcript.text)
+        lines.append("")
+        return "\n".join(lines)
+    for i, seg in enumerate(segments, 1):
         start_ms = seg.start_ms or 0
         duration_ms = seg.duration_ms or 2000
         end_ms = start_ms + duration_ms

@@ -113,6 +113,61 @@ class TestLRUCache:
 
         assert errors == []
 
+    # --- New dict-style API tests ---
+
+    def test_set_alias_for_put(self):
+        """set() should work as an alias for put()."""
+        cache = LRUCache(maxsize=10)
+        cache.set("key", "value")
+        assert cache.get("key") == "value"
+
+    def test_dict_style_setitem(self):
+        """cache[key] = value should work."""
+        cache = LRUCache(maxsize=10)
+        cache["key"] = "value"
+        assert cache.get("key") == "value"
+
+    def test_dict_style_getitem(self):
+        """cache[key] should return the value."""
+        cache = LRUCache(maxsize=10)
+        cache.put("key", "value")
+        assert cache["key"] == "value"
+
+    def test_dict_style_getitem_missing_raises_keyerror(self):
+        """cache[missing] should raise KeyError."""
+        cache = LRUCache(maxsize=10)
+        with pytest.raises(KeyError):
+            cache["nonexistent"]
+
+    def test_contains(self):
+        """key in cache should work."""
+        cache = LRUCache(maxsize=10)
+        cache.put("key", "value")
+        assert "key" in cache
+        assert "missing" not in cache
+
+    def test_len(self):
+        """len(cache) should return the number of items."""
+        cache = LRUCache(maxsize=10)
+        cache.put("a", 1)
+        cache.put("b", 2)
+        assert len(cache) == 2
+
+    def test_get_with_default(self):
+        """get(key, default) should return default for missing keys."""
+        cache = LRUCache(maxsize=10)
+        cache.put("a", 1)
+        assert cache.get("a", default=99) == 1
+        assert cache.get("missing", default=99) == 99
+
+    def test_repr(self):
+        """repr(cache) should return a readable string."""
+        cache = LRUCache(maxsize=10)
+        cache.put("a", 1)
+        r = repr(cache)
+        assert "LRUCache" in r
+        assert "size=1" in r
+
 
 class TestRateLimiter:
     def test_acquire_immediate(self):

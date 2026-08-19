@@ -144,9 +144,20 @@ class YouTubeScraper:
     def get_video(self, url_or_id: str) -> VideoResult:
         """Scrape a single YouTube video by URL or ID.
 
+        This is the main scraping method. It loads the YouTube watch page,
+        captures network responses, and extracts metadata, transcript,
+        comments, engagement metrics, and a summary.
+
         Args:
             url_or_id: A YouTube watch URL, youtu.be URL, shorts URL, or
                 bare 11-character video ID.
+
+                Valid examples::
+
+                    "dQw4w9WgXcQ"
+                    "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    "https://youtu.be/dQw4w9WgXcQ"
+                    "https://www.youtube.com/shorts/VIDEO_ID"
 
         Returns:
             A :class:`VideoResult` with metadata, transcript, comments,
@@ -157,6 +168,16 @@ class YouTubeScraper:
             AccessBlockedException: If YouTube returns an access challenge.
             SeleniumNotInstalledError: If Selenium is not available.
             BrowserNotInitializedError: If not used as a context manager.
+
+        Example::
+
+            with YouTubeScraper() as scraper:
+                result = scraper.get_video("dQw4w9WgXcQ")
+                print(result.metadata.title)
+                print(result.metadata.channel)
+                print(f"Views: {result.engagement.views}")
+                print(f"Comments: {len(result.comments)}")
+                print(f"Transcript: {result.transcript.text[:100]}")
         """
         try:
             video_id = extract_video_id(url_or_id)
@@ -268,6 +289,9 @@ class YouTubeScraper:
             network=network_info,
         )
 
+    # User-friendly alias: scrape() is the same as get_video()
+    scrape = get_video
+
     def get_streams(self, url_or_id: str) -> list[StreamFormat]:
         """Extract downloadable stream formats for a video.
 
@@ -359,6 +383,9 @@ class YouTubeScraper:
             session=self.session,
             progress_callback=progress_callback,
         )
+
+    # User-friendly alias: download() is the same as download_video_file()
+    download = download_video_file
 
     def batch_scrape(
         self,

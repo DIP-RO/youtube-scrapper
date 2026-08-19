@@ -41,6 +41,7 @@ from .core.exceptions import (
     AccessBlockedException,
     BrowserNotInitializedError,
     InvalidVideoURLError,
+    NetworkRequestError,
     ScraperError,
     SeleniumNotInstalledError,
     TranscriptUnavailableError,
@@ -116,6 +117,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "has_ffplay": (".media.player", "has_ffplay"),
     # Media — pipeline
     "ScrapePipeline": (".media.pipeline", "ScrapePipeline"),
+    "PipelineConfig": (".media.pipeline", "PipelineConfig"),
     "PipelineResult": (".media.pipeline", "PipelineResult"),
     "PipelineStageResult": (".media.pipeline", "PipelineStageResult"),
     "VALID_STAGES": (".media.pipeline", "VALID_STAGES"),
@@ -157,7 +159,7 @@ def __dir__() -> list[str]:
     return sorted(list(globals().keys()) + list(_LAZY_EXPORTS.keys()))
 
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 
 __all__ = [
     # Core (eagerly loaded)
@@ -169,6 +171,7 @@ __all__ = [
     "SeleniumNotInstalledError",
     "BrowserNotInitializedError",
     "TranscriptUnavailableError",
+    "NetworkRequestError",
     "VideoResult",
     "VideoMetadata",
     "Transcript",
@@ -227,6 +230,7 @@ __all__ = [
     "find_player_backend",
     "has_ffplay",
     "ScrapePipeline",
+    "PipelineConfig",
     "PipelineResult",
     "PipelineStageResult",
     "VALID_STAGES",

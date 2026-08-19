@@ -123,6 +123,51 @@ VALID_STAGES = frozenset({
 })
 
 
+@dataclass(slots=True)
+class PipelineConfig:
+    """Configuration for ScrapePipeline.
+
+    A user-friendly way to configure the pipeline without remembering
+    the order of positional arguments.
+
+    Attributes:
+        stages: List of stage names to execute in order.
+        export_format: Output format for export stage.
+        download_dir: Directory for downloaded files.
+        output_dir: Directory for exported data files.
+        video_quality: Quality for video downloads ("best", "720p", "1080p", etc.).
+        max_comments: Max comments to scrape per video.
+        max_workers: Concurrent browser instances.
+        headless: Run browser in headless mode.
+        checkpoint: Optional checkpoint file path for crash recovery.
+        auto_resume: Enable auto-resume with retries.
+        max_retries: Max retries for auto-resume.
+
+    Example::
+
+        config = PipelineConfig(
+            stages=["scrape", "sentiment", "export"],
+            export_format="csv",
+            max_comments=100,
+        )
+        pipeline = ScrapePipeline.from_config(config)
+        result = pipeline.run(["URL1", "URL2"])
+    """
+
+    stages: list[str] | None = None
+    export_format: str = "json"
+    download_dir: str | None = None
+    output_dir: str | None = None
+    video_quality: str = "best"
+    max_comments: int = 25
+    max_workers: int = 3
+    headless: bool = True
+    comment_filter: CommentFilter | None = None
+    checkpoint: str | None = None
+    auto_resume: bool = False
+    max_retries: int = 3
+
+
 class ScrapePipeline:
     """End-to-end pipeline for YouTube research workflows.
 
@@ -171,6 +216,33 @@ class ScrapePipeline:
         self.checkpoint = checkpoint
         self.auto_resume = auto_resume
         self.max_retries = max_retries
+
+    @classmethod
+    def from_config(cls, pipeline_config: PipelineConfig) -> "ScrapePipeline":
+        """Create a pipeline from a PipelineConfig object.
+
+        Example::
+
+            config = PipelineConfig(stages=["scrape", "sentiment"], max_comments=100)
+            pipeline = ScrapePipeline.from_config(config)
+        """
+        scraper_config = ScraperConfig(
+            max_comments=pipeline_config.max_comments,
+            max_workers=pipeline_config.max_workers,
+            headless=pipeline_config.headless,
+        )
+        return cls(
+            config=scraper_config,
+            stages=pipeline_config.stages,
+            export_format=pipeline_config.export_format,
+            download_dir=pipeline_config.download_dir,
+            output_dir=pipeline_config.output_dir,
+            comment_filter=pipeline_config.comment_filter,
+            video_quality=pipeline_config.video_quality,
+            checkpoint=pipeline_config.checkpoint,
+            auto_resume=pipeline_config.auto_resume,
+            max_retries=pipeline_config.max_retries,
+        )
 
     def run(self, urls_or_ids: list[str]) -> PipelineResult:
         """Run the full pipeline on a list of URLs/IDs.

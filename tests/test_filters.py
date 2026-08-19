@@ -113,6 +113,15 @@ class TestCommentFilter:
         assert len(filtered) == 1
         assert filtered[0].comment_id == "c4"
 
+    def test_min_text_length_filter(self):
+        """min_text_length filters out short comments."""
+        video = _make_video()
+        filtered = filter_comments(video, min_text_length=20)
+        # Comments with text >= 20 chars: c1, c3, c4 (all > 20 chars)
+        # c2 "Nice content, very helpful" = 27 chars, c5 "Thanks for sharing" = 18 chars
+        assert all(len(c.text) >= 20 for c in filtered)
+        assert len(filtered) >= 3
+
 
 class TestSearchComments:
     def test_basic_search(self):
