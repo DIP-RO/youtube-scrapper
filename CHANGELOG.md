@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.1] - 2026-08-19
+
+### Fixed
+
+- **CI test failure**: Renamed `cli/main.py` → `cli/app.py` to fix name collision
+  between the `main` function and `main` module. `@patch("...cli.main.YouTubeScraper")`
+  was resolving `main` as the function, not the module.
+
+### Changed
+
+- **Repository renamed**: `youtube-scrapper` → `media-data-extractor` on GitHub
+- Updated all project URLs in pyproject.toml and README
+- Added PyPI download stats badges (weekly, monthly) to README
+- Added GitHub stars and forks badges to README
+- Added dedicated "Download Statistics" section with live stats link
+
 ## [5.1.0] - 2026-08-19
 
 ### Fixed — API Inconsistencies from User Testing

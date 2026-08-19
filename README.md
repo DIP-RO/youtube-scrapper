@@ -7,7 +7,10 @@
 [![PyPI version](https://img.shields.io/pypi/v/media-data-extractor.svg)](https://pypi.org/project/media-data-extractor/)
 [![Python 3.10+](https://img.shields.io/pypi/pyversions/media-data-extractor.svg)](https://pypi.org/project/media-data-extractor/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-467%20passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-534%20passing-brightgreen.svg)](#)
+[![PyPI downloads](https://img.shields.io/pypi/dm/media-data-extractor.svg?label=downloads&color=blue)](https://pypistats.org/packages/media-data-extractor)
+[![GitHub stars](https://img.shields.io/github/stars/DIP-RO/media-data-extractor.svg?style=social)](https://github.com/DIP-RO/media-data-extractor)
+[![GitHub forks](https://img.shields.io/github/forks/DIP-RO/media-data-extractor.svg?style=social)](https://github.com/DIP-RO/media-data-extractor)
 
 A network-first YouTube data extraction toolkit that captures network responses through Chrome DevTools and parses YouTube's own JSON payloads. Unlike traditional DOM scrapers, this package opens a real browser via Selenium, captures network responses, and parses `ytInitialPlayerResponse`, `ytInitialData`, and `ytcfg`. It then uses YouTube's innertube API for transcripts and comments.
 
@@ -1099,11 +1102,23 @@ All configuration is done through the `ScraperConfig` dataclass:
 | `max_page_retries` | `2` | Number of retries when YouTube returns a block page |
 | `user_agent` | Chrome 125 UA | User-Agent string for the browser and HTTP session |
 
+## Download Statistics
+
+| Metric | Badge |
+|--------|-------|
+| **PyPI version** | [![PyPI version](https://img.shields.io/pypi/v/media-data-extractor.svg)](https://pypi.org/project/media-data-extractor/) |
+| **Total downloads** | [![PyPI downloads](https://img.shields.io/pypi/dw/media-data-extractor.svg?label=weekly&color=blue)](https://pypistats.org/packages/media-data-extractor) [![PyPI downloads](https://img.shields.io/pypi/dm/media-data-extractor.svg?label=monthly&color=blue)](https://pypistats.org/packages/media-data-extractor) |
+| **GitHub stars** | [![GitHub stars](https://img.shields.io/github/stars/DIP-RO/media-data-extractor.svg?style=social)](https://github.com/DIP-RO/media-data-extractor) |
+| **GitHub forks** | [![GitHub forks](https://img.shields.io/github/forks/DIP-RO/media-data-extractor.svg?style=social)](https://github.com/DIP-RO/media-data-extractor) |
+| **License** | [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) |
+
+> **Live download stats**: [pypistats.org/packages/media-data-extractor](https://pypistats.org/packages/media-data-extractor)
+
 ## Package Architecture
 
 The package is organized into focused, single-responsibility modules under `src/media_data_extractor/`. This separation of concerns makes the codebase easy to test, maintain, and extend:
 
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/module-graph.png" alt="Module dependency graph" width="680" />
+<img src="https://raw.githubusercontent.com/DIP-RO/media-data-extractor/main/docs/images/module-graph.png" alt="Module dependency graph" width="680" />
 
 | Module | Responsibility |
 |--------|---------------|
@@ -1118,7 +1133,7 @@ The package is organized into focused, single-responsibility modules under `src/
 
 ### How a scrape works
 
-<img src="https://raw.githubusercontent.com/DIP-RO/youtube-scrapper/main/docs/images/scrape-flow.png" alt="Scrape flowchart" width="820" />
+<img src="https://raw.githubusercontent.com/DIP-RO/media-data-extractor/main/docs/images/scrape-flow.png" alt="Scrape flowchart" width="820" />
 
 ### Design principles
 
